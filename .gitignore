@@ -1,0 +1,41 @@
+# Android generated files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Java compiled files
+*.class
+
+# Android build outputs
+/build/
+/app/build/
+
+# Gradle files
+.gradle/
+/local.properties
+
+# IDE files
+.idea/
+*.iml
+.DS_Store
+
+# Key files (never commit keystores)
+*.jks
+*.keystore
+
+# Google services
+google-services.json
+
+# Backend (has its own separate repo)
+App_Llamadas_Backend/
+
+# Other
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# PDF / docs (optional: comment this out if you want to track docs)
+*.pdf
+*.docx
