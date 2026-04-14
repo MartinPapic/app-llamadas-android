@@ -2,14 +2,17 @@ package com.cem.appllamadas.presentation.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cem.appllamadas.data.local.AppDatabase
 import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.data.remote.AuthApiService
 import com.cem.appllamadas.data.remote.LoginRequest
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 sealed class LoginUiState {
@@ -23,7 +26,8 @@ sealed class LoginUiState {
 class LoginViewModel @Inject constructor(
     private val authApiService: AuthApiService,
     private val sessionManager: SessionManager,
-    private val contactoRepository: ContactoRepository
+    private val contactoRepository: ContactoRepository,
+    private val appDatabase: AppDatabase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
@@ -48,7 +52,16 @@ class LoginViewModel @Inject constructor(
                         nombre       = body.nombre,
                         rol          = body.rol
                     )
-                    // Una vez completado el login exitoso, descargo contactos desde el server
+                    // Limpiar base de datos local para evitar fugas de datos de otros agentes
+                    withContext(Dispatchers.IO) {
+                        try {
+                            appDatabase.clearAllTables()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
+                    // Una vez limpiado y completado el login exitoso, descargo contactos desde el server
                     try {
                         contactoRepository.syncContactosDesdeServidor()
                     } catch (e: Exception) {

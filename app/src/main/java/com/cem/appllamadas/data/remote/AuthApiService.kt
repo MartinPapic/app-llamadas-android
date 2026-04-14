@@ -23,6 +23,6 @@ data class LoginResponse(
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 
 interface AuthApiService {
-    @POST("/api/auth/login")
+    @POST("/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 }

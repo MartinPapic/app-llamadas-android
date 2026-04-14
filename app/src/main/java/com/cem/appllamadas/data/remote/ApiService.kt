@@ -60,18 +60,18 @@ data class EncuestaSyncRequest(
 interface ApiService {
 
     /** Sincronización batch: envía N llamadas y contactos actualizados de una vez */
-    @POST("/api/sync")
+    @POST("/sync")
     suspend fun syncData(@Body payload: SyncPayload): Response<SyncResponse>
 
     /** Registrar una sola llamada (para sync inmediato si hay conexión) */
-    @POST("/api/calls")
+    @POST("/calls")
     suspend fun registrarLlamada(@Body llamada: LlamadaDto): Response<Map<String, String>>
 
     /** Obtener contactos del servidor (opcional: sincronizar hacia abajo) */
-    @GET("/api/contactos")
+    @GET("/contacts")
     suspend fun getContactos(@Query("estado") estado: String? = null): Response<List<ContactoDto>>
 
     /** Sincronizar encuestas cerradas */
-    @POST("/api/encuestas")
+    @POST("/encuestas")
     suspend fun syncEncuestas(@Body payload: EncuestaSyncRequest): Response<Map<String, String>>
 }
