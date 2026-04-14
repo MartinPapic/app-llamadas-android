@@ -8,6 +8,7 @@ import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.cem.appllamadas.domain.repository.LlamadaRepository
+import com.cem.appllamadas.domain.repository.EncuestaRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -27,7 +28,8 @@ import java.util.concurrent.TimeUnit
 class SyncWorker @AssistedInject constructor(
     @Assisted private val appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val llamadaRepository: LlamadaRepository
+    private val llamadaRepository: LlamadaRepository,
+    private val encuestaRepository: EncuestaRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -75,6 +77,7 @@ class SyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
             llamadaRepository.syncLlamadasPendientes()
+            encuestaRepository.syncEncuestasPendientes()
             // Notificar éxito solo si hay datos sincronizados
             // (el repo no lanza excepción si no hay pendientes)
             Result.success()

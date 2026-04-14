@@ -12,6 +12,9 @@ import com.cem.appllamadas.domain.model.ResultadoLlamada
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import com.cem.appllamadas.domain.usecase.ObtenerSiguienteContactoUseCase
 import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
+import com.cem.appllamadas.domain.repository.EncuestaRepository
+import com.cem.appllamadas.domain.model.Encuesta
+import com.cem.appllamadas.domain.model.EstadoEncuesta
 import com.cem.appllamadas.worker.SyncWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,6 +40,7 @@ class ContactoViewModel @Inject constructor(
     private val obtenerSiguienteContactoUseCase: ObtenerSiguienteContactoUseCase,
     private val registrarLlamadaUseCase: RegistrarLlamadaUseCase,
     private val contactoRepository: ContactoRepository,
+    private val encuestaRepository: EncuestaRepository,
     private val sessionManager: SessionManager,
     val callStateManager: CallStateManager,
     @ApplicationContext private val context: Context
@@ -61,6 +65,10 @@ class ContactoViewModel @Inject constructor(
     // ─── Navegación: mostrar listado o detalle ────────────────────────────────
     private val _mostrarListado = MutableStateFlow(true)
     val mostrarListado: StateFlow<Boolean> = _mostrarListado.asStateFlow()
+
+    // ─── Estado del Dialogo de Encuesta ───────────────────────────────────────
+    private val _mostrarEncuestaDialog = MutableStateFlow<String?>(null)
+    val mostrarEncuestaDialog: StateFlow<String?> = _mostrarEncuestaDialog.asStateFlow()
 
     init {
         observeCallState()
@@ -130,9 +138,12 @@ class ContactoViewModel @Inject constructor(
             callStateManager.resetState()
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
-            // Volver al listado después de registrar
-            _mostrarListado.value = true
-            _contactoActual.value = null
+
+            if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
+                _mostrarEncuestaDialog.value = contacto.id
+            } else {
+                volverAlListado()
+            }
         }
     }
 
@@ -161,9 +172,36 @@ class ContactoViewModel @Inject constructor(
             registrarLlamadaUseCase(llamada, contacto)
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
-            _mostrarListado.value = true
-            _contactoActual.value = null
+            
+            if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
+                _mostrarEncuestaDialog.value = contacto.id
+            } else {
+                volverAlListado()
+            }
         }
+    }
+
+    fun rechazarEncuestaDialog() {
+        val contactoId = _mostrarEncuestaDialog.value ?: return
+        viewModelScope.launch {
+            val encuesta = Encuesta(
+                id = UUID.randomUUID().toString(),
+                contactoId = contactoId,
+                url = "", // no procede
+                estado = EstadoEncuesta.NO_REALIZADA,
+                fecha = System.currentTimeMillis()
+            )
+            encuestaRepository.guardarEncuesta(encuesta)
+            SyncWorker.dispatchImmediate(context)
+            _mostrarEncuestaDialog.value = null
+            volverAlListado()
+        }
+    }
+
+    fun aceptarEncuestaDialog() {
+        // Solo limpiamos el dialog, la UI se encargará de navegar pasándole el ID guardado
+        _mostrarEncuestaDialog.value = null
+        // No llamamos volverAlListado() aún, la idea es que la UI navegue a EncuestaScreen con ese ID.
     }
 
     fun logout() {

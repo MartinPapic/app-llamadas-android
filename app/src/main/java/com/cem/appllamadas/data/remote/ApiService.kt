@@ -42,6 +42,19 @@ data class ContactoDto(
     val fechaCreacion: Long
 )
 
+// DTOs para Encuesta
+data class EncuestaDto(
+    val id: String,
+    val contactoId: String,
+    val url: String,
+    val estado: String,          // "COMPLETA", "INCOMPLETA", "NO_REALIZADA"
+    val fecha: Long
+)
+
+data class EncuestaSyncRequest(
+    val encuestas: List<EncuestaDto>
+)
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 interface ApiService {
@@ -57,4 +70,8 @@ interface ApiService {
     /** Obtener contactos del servidor (opcional: sincronizar hacia abajo) */
     @GET("/api/contactos")
     suspend fun getContactos(@Query("estado") estado: String? = null): Response<List<ContactoDto>>
+
+    /** Sincronizar encuestas cerradas */
+    @POST("/api/encuestas")
+    suspend fun syncEncuestas(@Body payload: EncuestaSyncRequest): Response<Map<String, String>>
 }

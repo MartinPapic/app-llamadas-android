@@ -14,6 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.presentation.contacto.ContactoScreen
 import com.cem.appllamadas.presentation.contacto.ContactoViewModel
+import com.cem.appllamadas.presentation.encuesta.EncuestaScreen
+import com.cem.appllamadas.presentation.encuesta.EncuestaViewModel
 import com.cem.appllamadas.presentation.login.LoginScreen
 import com.cem.appllamadas.presentation.login.LoginViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -62,16 +64,27 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("login") {
                                         popUpTo(0) { inclusive = true }
                                     }
+                                },
+                                onAbrirEncuesta = { contactoId ->
+                                    navController.navigate("encuesta/$contactoId")
                                 }
                             )
                         }
 
-                        composable("encuesta/{url}") { backStackEntry ->
-                            val url = backStackEntry.arguments?.getString("url")
-                                ?: "https://www.questionpro.com"
-                            com.cem.appllamadas.presentation.encuesta.EncuestaScreen(url = url) {
-                                navController.popBackStack()
-                            }
+                        composable("encuesta/{contactoId}") { backStackEntry ->
+                            val contactoId = backStackEntry.arguments?.getString("contactoId") ?: ""
+                            // Usamos URL de prueba según lo solicitado por el usuario
+                            val url = "https://www.questionpro.com/t/demo?contacto_id=${contactoId}"
+                            val viewModel = hiltViewModel<EncuestaViewModel>()
+
+                            EncuestaScreen(
+                                contactoId = contactoId,
+                                url = url,
+                                viewModel = viewModel,
+                                onFinished = {
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                     }
                 }

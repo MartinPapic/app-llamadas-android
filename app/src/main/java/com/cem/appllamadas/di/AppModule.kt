@@ -74,7 +74,7 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "app_llamadas_db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
@@ -85,6 +85,11 @@ object AppModule {
     @Provides
     fun provideLlamadaDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.LlamadaDao {
         return appDatabase.llamadaDao
+    }
+
+    @Provides
+    fun provideEncuestaDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.EncuestaDao {
+        return appDatabase.encuestaDao
     }
 
     @Provides
@@ -104,6 +109,15 @@ object AppModule {
         apiService: ApiService
     ): LlamadaRepository {
         return com.cem.appllamadas.data.repository.LlamadaRepositoryImpl(dao, contactoDao, apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEncuestaRepository(
+        dao: com.cem.appllamadas.data.local.dao.EncuestaDao,
+        apiService: ApiService
+    ): com.cem.appllamadas.domain.repository.EncuestaRepository {
+        return com.cem.appllamadas.data.repository.EncuestaRepositoryImpl(dao, apiService)
     }
 
     @Provides

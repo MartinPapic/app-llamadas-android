@@ -62,11 +62,38 @@ private fun estadoLabel(estado: EstadoContacto) = when (estado) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
+fun ContactoScreen(
+    viewModel: ContactoViewModel,
+    onLogout: () -> Unit,
+    onAbrirEncuesta: (String) -> Unit
+) {
     val mostrarListado by viewModel.mostrarListado.collectAsState()
     val contacto       by viewModel.contactoActual.collectAsState()
     val callState      by viewModel.callStateManager.callState.collectAsState()
     val postCall       by viewModel.postCallState.collectAsState()
+    val mostrarDialog  by viewModel.mostrarEncuestaDialog.collectAsState()
+
+    if (mostrarDialog != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.rechazarEncuestaDialog() },
+            title = { Text("Aplicar Encuesta") },
+            text = { Text("La llamada resultó exitosa. ¿Deseas abrir QuestionPro para realizar la encuesta ahora?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = mostrarDialog!!
+                    viewModel.aceptarEncuestaDialog()
+                    onAbrirEncuesta(id)
+                }) {
+                    Text("Sí, abrir encuesta")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.rechazarEncuestaDialog() }) {
+                    Text("No, omitir (No realizada)")
+                }
+            }
+        )
+    }
 
     when {
         // 1. Formulario post-llamada
@@ -215,12 +242,14 @@ fun ContactoListItem(contacto: Contacto, onClick: () -> Unit) {
 @Composable
 fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
     val context = LocalContext.current
-    var mostrarFormManual by remember { mutableStateOf(false) }
 
     val callPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val canCall = permissions[Manifest.permission.CALL_PHONE] ?: false
+        val canReadState = permissions[Manifest.permission.READ_PHONE_STATE] ?: false
+
+        if (canCall && canReadState) {
             viewModel.iniciarLlamada()
             val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${contacto.telefono}"))
             context.startActivity(intent)
@@ -299,7 +328,14 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
             if (!bloqueado) {
                 // Botón principal de llamada
                 Button(
-                    onClick = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
+                    onClick = {
+                        callPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.CALL_PHONE,
+                                Manifest.permission.READ_PHONE_STATE
+                            )
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
@@ -308,26 +344,6 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                     Spacer(Modifier.width(8.dp))
                     Text("Llamar ahora", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-
-                // Opción para registrar sin marcador
-                OutlinedButton(
-                    onClick = { mostrarFormManual = true },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text("Registrar resultado sin llamar")
-                }
-            }
-
-            // Formulario manual inline (cuando el agente ya llamó por su cuenta)
-            AnimatedVisibility(visible = mostrarFormManual) {
-                RegistroManualForm(
-                    onConfirmar = { resultado, tipo, obs ->
-                        viewModel.registrarLlamadaManual(resultado, tipo, obs)
-                        mostrarFormManual = false
-                    },
-                    onCancelar = { mostrarFormManual = false }
-                )
             }
         }
     }
@@ -521,54 +537,3 @@ fun ResultadoSelector(
     }
 }
 
-// ─── Formulario de registro manual (sin marcador) ────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RegistroManualForm(
-    onConfirmar: (ResultadoLlamada, String, String) -> Unit,
-    onCancelar: () -> Unit
-) {
-    var resultado    by remember { mutableStateOf<ResultadoLlamada?>(null) }
-    var tipificacion by remember { mutableStateOf(TIPIFICACIONES.first()) }
-    var observacion  by remember { mutableStateOf("") }
-    var expanded     by remember { mutableStateOf(false) }
-
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Registrar resultado", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-            ResultadoSelector(selected = resultado, onSelect = { resultado = it })
-
-            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                OutlinedTextField(value = tipificacion, onValueChange = {}, readOnly = true,
-                    label = { Text("Tipificación") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp))
-                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    TIPIFICACIONES.forEach { op ->
-                        DropdownMenuItem(text = { Text(op) }, onClick = { tipificacion = op; expanded = false })
-                    }
-                }
-            }
-
-            OutlinedTextField(value = observacion, onValueChange = { observacion = it },
-                label = { Text("Observación (opcional)") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), minLines = 2)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onCancelar, modifier = Modifier.weight(1f)) { Text("Cancelar") }
-                Button(
-                    onClick = { resultado?.let { onConfirmar(it, tipificacion, observacion) } },
-                    enabled = resultado != null,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
-                ) { Text("Guardar") }
-            }
-        }
-    }
-}
