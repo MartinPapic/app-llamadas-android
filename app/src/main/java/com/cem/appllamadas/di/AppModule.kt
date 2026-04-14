@@ -89,8 +89,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideContactoRepository(dao: com.cem.appllamadas.data.local.dao.ContactoDao): ContactoRepository {
-        return com.cem.appllamadas.data.repository.ContactoRepositoryImpl(dao)
+    fun provideContactoRepository(
+        dao: com.cem.appllamadas.data.local.dao.ContactoDao,
+        apiService: ApiService
+    ): ContactoRepository {
+        return com.cem.appllamadas.data.repository.ContactoRepositoryImpl(dao, apiService)
     }
 
     @Provides

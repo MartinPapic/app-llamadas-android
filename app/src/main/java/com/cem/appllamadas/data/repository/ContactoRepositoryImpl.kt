@@ -4,11 +4,14 @@ import com.cem.appllamadas.data.local.dao.ContactoDao
 import com.cem.appllamadas.domain.model.Contacto
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import com.cem.appllamadas.data.local.entity.ContactoEntity
+import com.cem.appllamadas.domain.model.EstadoContacto
+import com.cem.appllamadas.data.remote.ApiService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class ContactoRepositoryImpl(
-    private val contactoDao: ContactoDao
+    private val contactoDao: ContactoDao,
+    private val apiService: ApiService
 ) : ContactoRepository {
 
     override suspend fun getSiguienteContacto(): Contacto? {
@@ -26,6 +29,32 @@ class ContactoRepositoryImpl(
 
     override fun getAllContactos(): Flow<List<Contacto>> =
         contactoDao.getAllContactos().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun syncContactosDesdeServidor() {
+        try {
+            // Obtenemos solo los pendientes o en_gestion (los activos)
+            val response = apiService.getContactos("pendiente") 
+            if (response.isSuccessful) {
+                val remotos = response.body() ?: emptyList()
+                val entidades = remotos.map { dto ->
+                    ContactoEntity(
+                        id = dto.id,
+                        nombre = dto.nombre,
+                        telefono = dto.telefono,
+                        estado = EstadoContacto.valueOf(dto.estado.uppercase()),
+                        intentos = dto.intentos,
+                        fechaCreacion = dto.fechaCreacion
+                    )
+                }
+                if (entidades.isNotEmpty()) {
+                    contactoDao.insertContactos(entidades)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallo silencioso: si no hay red, la vista ya mostrará el caché
+        }
+    }
 
     private fun ContactoEntity.toDomain() = Contacto(
         id = id,
