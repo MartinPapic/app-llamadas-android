@@ -7,6 +7,8 @@ import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.data.remote.AuthApiService
 import com.cem.appllamadas.data.remote.LoginRequest
 import com.cem.appllamadas.domain.repository.ContactoRepository
+import com.cem.appllamadas.domain.repository.LlamadaRepository
+import com.cem.appllamadas.domain.repository.EncuestaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,8 @@ class LoginViewModel @Inject constructor(
     private val authApiService: AuthApiService,
     private val sessionManager: SessionManager,
     private val contactoRepository: ContactoRepository,
+    private val llamadaRepository: LlamadaRepository,
+    private val encuestaRepository: EncuestaRepository,
     private val appDatabase: AppDatabase
 ) : ViewModel() {
 
@@ -52,22 +56,37 @@ class LoginViewModel @Inject constructor(
                         nombre       = body.nombre,
                         rol          = body.rol
                     )
-                    // Limpiar base de datos local para evitar fugas de datos de otros agentes
+
                     withContext(Dispatchers.IO) {
+                        // PASO 1: Subir llamadas y encuestas pendientes ANTES de limpiar la BD.
+                        // Esto garantiza que los datos de la sesión anterior no se pierdan
+                        // incluso si la app fue cerrada antes de que el SyncWorker terminara.
+                        try {
+                            llamadaRepository.syncLlamadasPendientes()
+                        } catch (e: Exception) {
+                            e.printStackTrace() // Registro el error pero no bloqueo el login
+                        }
+                        try {
+                            encuestaRepository.syncEncuestasPendientes()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+
+                        // PASO 2: Solo limpiar DESPUÉS de haber subido los datos pendientes.
                         try {
                             appDatabase.clearAllTables()
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
+
+                        // PASO 3: Descargar contactos frescos del servidor para este agente.
+                        try {
+                            contactoRepository.syncContactosDesdeServidor()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
 
-                    // Una vez limpiado y completado el login exitoso, descargo contactos desde el server
-                    try {
-                        contactoRepository.syncContactosDesdeServidor()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    
                     _uiState.value = LoginUiState.Success
                 } else {
                     _uiState.value = LoginUiState.Error("Credenciales incorrectas")
