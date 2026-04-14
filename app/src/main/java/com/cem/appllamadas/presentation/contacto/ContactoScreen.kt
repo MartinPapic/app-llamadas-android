@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,7 +62,7 @@ private fun estadoLabel(estado: EstadoContacto) = when (estado) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactoScreen(viewModel: ContactoViewModel) {
+fun ContactoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
     val mostrarListado by viewModel.mostrarListado.collectAsState()
     val contacto       by viewModel.contactoActual.collectAsState()
     val callState      by viewModel.callStateManager.callState.collectAsState()
@@ -88,7 +89,7 @@ fun ContactoScreen(viewModel: ContactoViewModel) {
         )
 
         // 4. Listado de contactos
-        else -> ContactoListadoScreen(viewModel = viewModel)
+        else -> ContactoListadoScreen(viewModel = viewModel, onLogout = onLogout)
     }
 }
 
@@ -98,7 +99,7 @@ fun ContactoScreen(viewModel: ContactoViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactoListadoScreen(viewModel: ContactoViewModel) {
+fun ContactoListadoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
     val contactos by viewModel.todosLosContactos.collectAsState()
     val pendientes = contactos.filter {
         it.estado != EstadoContacto.DESISTIDO && it.estado != EstadoContacto.CONTACTADO
@@ -115,6 +116,11 @@ fun ContactoListadoScreen(viewModel: ContactoViewModel) {
                         Text("App Llamadas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("${pendientes.size} pendientes · ${contactos.size} total",
                             fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

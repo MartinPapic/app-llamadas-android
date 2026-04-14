@@ -55,7 +55,15 @@ class MainActivity : ComponentActivity() {
 
                         composable("contacto") {
                             val viewModel = hiltViewModel<ContactoViewModel>()
-                            ContactoScreen(viewModel)
+                            ContactoScreen(
+                                viewModel = viewModel,
+                                onLogout = {
+                                    viewModel.logout()
+                                    navController.navigate("login") {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            )
                         }
 
                         composable("encuesta/{url}") { backStackEntry ->

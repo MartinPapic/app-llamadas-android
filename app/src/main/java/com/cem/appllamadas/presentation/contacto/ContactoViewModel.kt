@@ -165,4 +165,8 @@ class ContactoViewModel @Inject constructor(
             _contactoActual.value = null
         }
     }
+
+    fun logout() {
+        sessionManager.clearSession()
+    }
 }
