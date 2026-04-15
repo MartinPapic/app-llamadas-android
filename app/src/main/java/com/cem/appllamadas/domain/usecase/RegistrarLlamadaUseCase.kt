@@ -18,6 +18,7 @@ class RegistrarLlamadaUseCase(
         val nuevosIntentos = contacto.intentos + 1
         val nuevoEstado = when {
             llamada.resultado == com.cem.appllamadas.domain.model.ResultadoLlamada.CONTACTADO_EFECTIVO -> EstadoContacto.CONTACTADO
+            llamada.tipificacion == "RECHAZO_EXPLICITO" -> EstadoContacto.DESISTIDO
             nuevosIntentos >= 5 -> EstadoContacto.DESISTIDO
             else -> EstadoContacto.EN_GESTION
         }
