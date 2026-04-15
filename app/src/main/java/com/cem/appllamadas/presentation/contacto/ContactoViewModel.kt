@@ -139,11 +139,13 @@ class ContactoViewModel @Inject constructor(
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
 
-            if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
-                _mostrarEncuestaDialog.value = contacto.id
-            } else {
-                volverAlListado()
-            }
+            // TODO: QuestionPro — activar cuando el módulo de encuestas esté listo
+            // if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
+            //     _mostrarEncuestaDialog.value = contacto.id
+            // } else {
+            //     volverAlListado()
+            // }
+            volverAlListado()
         }
     }
 
@@ -172,12 +174,14 @@ class ContactoViewModel @Inject constructor(
             registrarLlamadaUseCase(llamada, contacto)
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
-            
-            if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
-                _mostrarEncuestaDialog.value = contacto.id
-            } else {
-                volverAlListado()
-            }
+
+            // TODO: QuestionPro — activar cuando el módulo de encuestas esté listo
+            // if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
+            //     _mostrarEncuestaDialog.value = contacto.id
+            // } else {
+            //     volverAlListado()
+            // }
+            volverAlListado()
         }
     }
 

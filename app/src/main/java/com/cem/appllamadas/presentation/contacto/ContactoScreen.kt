@@ -76,27 +76,28 @@ fun ContactoScreen(
     val postCall       by viewModel.postCallState.collectAsState()
     val mostrarDialog  by viewModel.mostrarEncuestaDialog.collectAsState()
 
-    if (mostrarDialog != null) {
-        AlertDialog(
-            onDismissRequest = { viewModel.rechazarEncuestaDialog() },
-            title = { Text("Aplicar Encuesta") },
-            text = { Text("La llamada resultó exitosa. ¿Deseas abrir QuestionPro para realizar la encuesta ahora?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    val id = mostrarDialog!!
-                    viewModel.aceptarEncuestaDialog()
-                    onAbrirEncuesta(id)
-                }) {
-                    Text("Sí, abrir encuesta")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.rechazarEncuestaDialog() }) {
-                    Text("No, omitir (No realizada)")
-                }
-            }
-        )
-    }
+    // TODO: QuestionPro — descomentar este bloque cuando el módulo de encuestas esté listo
+    // if (mostrarDialog != null) {
+    //     AlertDialog(
+    //         onDismissRequest = { viewModel.rechazarEncuestaDialog() },
+    //         title = { Text("Aplicar Encuesta") },
+    //         text = { Text("La llamada resultó exitosa. ¿Deseas abrir QuestionPro para realizar la encuesta ahora?") },
+    //         confirmButton = {
+    //             TextButton(onClick = {
+    //                 val id = mostrarDialog!!
+    //                 viewModel.aceptarEncuestaDialog()
+    //                 onAbrirEncuesta(id)
+    //             }) {
+    //                 Text("Sí, abrir encuesta")
+    //             }
+    //         },
+    //         dismissButton = {
+    //             TextButton(onClick = { viewModel.rechazarEncuestaDialog() }) {
+    //                 Text("No, omitir (No realizada)")
+    //             }
+    //         }
+    //     )
+    // }
 
     when {
         // 1. Formulario post-llamada
