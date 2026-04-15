@@ -9,4 +9,5 @@ interface ContactoRepository {
     suspend fun obtenerContacto(id: String): Contacto?
     fun getAllContactos(): Flow<List<Contacto>>
     suspend fun syncContactosDesdeServidor()
+    suspend fun lockContacto(id: String): Result<Unit>
 }

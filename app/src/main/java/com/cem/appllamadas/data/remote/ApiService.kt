@@ -75,4 +75,8 @@ interface ApiService {
     /** Sincronizar encuestas cerradas */
     @POST("/encuestas")
     suspend fun syncEncuestas(@Body payload: EncuestaSyncRequest): Response<Map<String, String>>
+
+    /** Bloqueo preventivo de contacto antes de llamar ( Pool Model ) */
+    @POST("/contacts/{id}/lock")
+    suspend fun lockContacto(@retrofit2.http.Path("id") id: String): Response<Map<String, Any>>
 }

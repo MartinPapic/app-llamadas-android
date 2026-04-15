@@ -93,29 +93,37 @@ fun ContactoScreen(
     val callState      by viewModel.callStateManager.callState.collectAsState()
     val postCall       by viewModel.postCallState.collectAsState()
     val mostrarDialog  by viewModel.mostrarEncuestaDialog.collectAsState()
+    val isLoading      by viewModel.isLoading.collectAsState()
+    val errorConcurrencia by viewModel.errorConcurrencia.collectAsState()
 
-    // TODO: QuestionPro — descomentar este bloque cuando el módulo de encuestas esté listo
-    // if (mostrarDialog != null) {
-    //     AlertDialog(
-    //         onDismissRequest = { viewModel.rechazarEncuestaDialog() },
-    //         title = { Text("Aplicar Encuesta") },
-    //         text = { Text("La llamada resultó exitosa. ¿Deseas abrir QuestionPro para realizar la encuesta ahora?") },
-    //         confirmButton = {
-    //             TextButton(onClick = {
-    //                 val id = mostrarDialog!!
-    //                 viewModel.aceptarEncuestaDialog()
-    //                 onAbrirEncuesta(id)
-    //             }) {
-    //                 Text("Sí, abrir encuesta")
-    //             }
-    //         },
-    //         dismissButton = {
-    //             TextButton(onClick = { viewModel.rechazarEncuestaDialog() }) {
-    //                 Text("No, omitir (No realizada)")
-    //             }
-    //         }
-    //     )
-    // }
+    // Manejo de Error de Concurrencia (Pool Model)
+    if (errorConcurrencia != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.resetErrorConcurrencia() },
+            title = { Text("Contacto No Disponible") },
+            text = { Text(errorConcurrencia!!) },
+            confirmButton = {
+                TextButton(onClick = { 
+                    viewModel.resetErrorConcurrencia()
+                    viewModel.volverAlListado() 
+                }) {
+                    Text("Entendido")
+                }
+            }
+        )
+    }
+
+    if (isLoading) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
+            Card(shape = RoundedCornerShape(12.dp)) {
+                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(16.dp))
+                    Text("Verificando disponibilidad...")
+                }
+            }
+        }
+    }
 
     when {
         // 1. Formulario post-llamada
@@ -168,6 +176,9 @@ fun ContactoListadoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.forceRefresh() }) {
+                        Icon(androidx.compose.material.icons.filled.Refresh, contentDescription = "Actualizar", tint = Color.White)
+                    }
                     IconButton(onClick = onLogout) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
                     }
@@ -295,9 +306,11 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
         val canReadState = permissions[Manifest.permission.READ_PHONE_STATE] ?: false
 
         if (canCall && canReadState) {
-            viewModel.iniciarLlamada()
-            val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${contacto.telefono}"))
-            context.startActivity(intent)
+            viewModel.intentarBloquearContacto(contacto.id) {
+                viewModel.iniciarLlamada()
+                val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${contacto.telefono}"))
+                context.startActivity(intent)
+            }
         }
     }
 

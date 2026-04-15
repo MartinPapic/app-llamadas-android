@@ -56,6 +56,23 @@ class ContactoRepositoryImpl(
         }
     }
 
+    override suspend fun lockContacto(id: String): Result<Unit> {
+        return try {
+            val response = apiService.lockContacto(id)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                if (response.code() == 409) {
+                    Result.failure(Exception("CONCURRENCE_ERROR"))
+                } else {
+                    Result.failure(Exception("Error de red: ${response.code()}"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun ContactoEntity.toDomain() = Contacto(
         id = id,
         nombre = nombre,

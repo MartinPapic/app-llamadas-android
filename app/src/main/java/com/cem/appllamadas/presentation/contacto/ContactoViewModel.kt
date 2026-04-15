@@ -70,6 +70,10 @@ class ContactoViewModel @Inject constructor(
     private val _mostrarEncuestaDialog = MutableStateFlow<String?>(null)
     val mostrarEncuestaDialog: StateFlow<String?> = _mostrarEncuestaDialog.asStateFlow()
 
+    // ─── Estado de error de concurrencia (Pool Model) ─────────────────────────
+    private val _errorConcurrencia = MutableStateFlow<String?>(null)
+    val errorConcurrencia: StateFlow<String?> = _errorConcurrencia.asStateFlow()
+
     init {
         observeCallState()
     }
@@ -102,6 +106,38 @@ class ContactoViewModel @Inject constructor(
         _contactoActual.value = null
         callStateManager.resetState()
         _postCallState.value = null
+    }
+
+    fun resetErrorConcurrencia() {
+        _errorConcurrencia.value = null
+    }
+
+    /** Tienta bloquear el contacto en el servidor antes de llamar */
+    fun intentarBloquearContacto(contactoId: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = contactoRepository.lockContacto(contactoId)
+            _isLoading.value = false
+            
+            result.onSuccess {
+                onSuccess()
+            }.onFailure { e ->
+                if (e.message == "CONCURRENCE_ERROR") {
+                    _errorConcurrencia.value = "Este contacto ya está siendo gestionado por otro agente. Por favor, selecciona otro."
+                } else {
+                    // Si falla por red, en este modelo de pool es crítico, no permitimos llamar
+                    _errorConcurrencia.value = "Error de conexión: No se pudo verificar la exclusividad del contacto. Verifica tu internet."
+                }
+            }
+        }
+    }
+
+    fun forceRefresh() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            contactoRepository.syncContactosDesdeServidor()
+            _isLoading.value = false
+        }
     }
 
     fun iniciarLlamada() {
