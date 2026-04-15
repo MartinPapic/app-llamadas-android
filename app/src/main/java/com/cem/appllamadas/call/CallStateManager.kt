@@ -20,12 +20,22 @@ data class CallResult(
 )
 
 sealed class CallState {
-    object Idle : CallState()
-    object Calling : CallState()           // call initiated, waiting
-    object Answered : CallState()          // OFFHOOK detected
+    object Idle     : CallState()
+    object Calling  : CallState()    // call initiated (dialing)
+    object Answered : CallState()    // OFFHOOK — call connected
     data class Ended(val result: CallResult) : CallState()
 }
 
+/**
+ * Tracks the lifecycle of a phone call using PhoneStateListener.
+ *
+ * KEY FIX: when PhoneStateListener is registered, Android immediately broadcasts
+ * the current phone state (usually IDLE). We MUST ignore this initial IDLE event
+ * or the post-call form will appear instantly with duration = 0.
+ *
+ * We only process IDLE after having seen at least one OFFHOOK event, which
+ * signals that the call actually connected (or at least the dialer went active).
+ */
 @Singleton
 class CallStateManager @Inject constructor(
     @ApplicationContext private val context: Context
@@ -36,17 +46,19 @@ class CallStateManager @Inject constructor(
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
     val callState: StateFlow<CallState> = _callState.asStateFlow()
 
-    // The moment the user pressed "Call" — before the call connects
+    // Time when the user pressed "Llamar"
     private var trackingStartTime: Long = 0L
-    // The moment OFFHOOK was detected (call answered)
+    // Time when OFFHOOK was detected (call answered)
     private var offhookTime: Long = 0L
 
     private var wasAnswered: Boolean = false
     private var isTracking: Boolean = false
 
-    // Minimum seconds to consider a call "answered" even if OFFHOOK wasn't detected
-    // This handles API 31+ where OFFHOOK sometimes fires late or not at all
-    private val MIN_CONNECT_THRESHOLD_SEC = 3
+    /**
+     * Guard against the initial IDLE broadcast that PhoneStateListener fires
+     * on registration. We only process IDLE after we've seen an active state.
+     */
+    private var hasSeenActiveState: Boolean = false
 
     private val listener = object : PhoneStateListener() {
         @Suppress("DEPRECATION")
@@ -55,37 +67,42 @@ class CallStateManager @Inject constructor(
 
             when (state) {
                 TelephonyManager.CALL_STATE_OFFHOOK -> {
-                    // Call connected — record the exact answer time
+                    // Call is active (connected). Record exact answer time.
+                    hasSeenActiveState = true
                     wasAnswered = true
                     offhookTime = System.currentTimeMillis()
                     _callState.value = CallState.Answered
                 }
 
+                TelephonyManager.CALL_STATE_RINGING -> {
+                    // Outgoing call is ringing on the other side.
+                    // Mark as active so IDLE after this is not ignored.
+                    hasSeenActiveState = true
+                }
+
                 TelephonyManager.CALL_STATE_IDLE -> {
+                    // IMPORTANT: ignore the very first IDLE that fires on listener
+                    // registration. Only process IDLE after we've seen an active state.
+                    if (!hasSeenActiveState) return
+
                     val endTime = System.currentTimeMillis()
 
-                    // Primary: use OFFHOOK time if we captured it
-                    // Fallback: if call lasted > threshold from tracking start, treat as answered
-                    val elapsedSinceTracking = ((endTime - trackingStartTime) / 1000).toInt()
-                    val probablyAnswered = wasAnswered || elapsedSinceTracking >= MIN_CONNECT_THRESHOLD_SEC
-
-                    val (duracion, fechaInicio) = when {
-                        wasAnswered -> {
-                            // We have a precise answer time
-                            val secs = ((endTime - offhookTime) / 1000).toInt()
-                            Pair(secs, offhookTime)
-                        }
-                        probablyAnswered -> {
-                            // OFFHOOK missed (common on Android 12+), use tracking start as proxy
-                            Pair(elapsedSinceTracking, trackingStartTime)
-                        }
-                        else -> {
-                            // Truly not answered (short ring, immediate hang-up)
-                            Pair(0, endTime)
-                        }
+                    // Calculate duration from the moment the call was answered (OFFHOOK),
+                    // falling back to tracking start if OFFHOOK wasn't captured.
+                    val (duracion, fechaInicio) = if (wasAnswered) {
+                        val secs = ((endTime - offhookTime) / 1000).toInt()
+                        Pair(secs, offhookTime)
+                    } else {
+                        // OFFHOOK was never captured (can happen on some Android 12+ devices).
+                        // Use trackingStartTime as a proxy — agent pressed Call, then the
+                        // call went active and ended, so elapsed time ≈ call duration.
+                        val elapsedSecs = ((endTime - trackingStartTime) / 1000).toInt()
+                        Pair(elapsedSecs, trackingStartTime)
                     }
 
-                    val resultado = if (probablyAnswered)
+                    // If the call ended without OFFHOOK and very quickly,
+                    // it was likely not answered (busy, rejected, etc.)
+                    val resultado = if (wasAnswered || duracion >= 5)
                         ResultadoLlamada.CONTESTA
                     else
                         ResultadoLlamada.NO_CONTESTA
@@ -107,11 +124,15 @@ class CallStateManager @Inject constructor(
     @Suppress("DEPRECATION")
     fun startTracking() {
         if (isTracking) return
-        wasAnswered = false
-        offhookTime = 0L
+        // Reset all state before starting
+        wasAnswered       = false
+        hasSeenActiveState = false
+        offhookTime       = 0L
         trackingStartTime = System.currentTimeMillis()
-        isTracking = true
-        _callState.value = CallState.Calling
+        isTracking        = true
+        _callState.value  = CallState.Calling
+        // Register listener — Android will immediately fire the current IDLE state.
+        // The hasSeenActiveState guard above will properly ignore it.
         telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
     }
 
