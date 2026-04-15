@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,13 +36,30 @@ import com.cem.appllamadas.domain.model.Contacto
 import com.cem.appllamadas.domain.model.EstadoContacto
 import com.cem.appllamadas.domain.model.ResultadoLlamada
 
-// ─── Tipificaciones disponibles ──────────────────────────────────────────────
-private val TIPIFICACIONES = listOf(
-    "Venta exitosa", "Interesado", "No interesado",
-    "Buzón de voz", "Número inválido", "Reagendar", "Otro"
+// ─── Estructura de Tipificaciones Jerárquicas ────────────────────────────────
+private val TIPIFICACIONES_POR_RESULTADO = mapOf(
+    ResultadoLlamada.CONTACTADO_EFECTIVO to listOf(
+        "ENCUESTA_COMPLETA", "ENCUESTA_PARCIAL", "AGENDA_CALLBACK", "DERIVADO_A_OTRO"
+    ),
+    ResultadoLlamada.CONTACTADO_NO_EFECTIVO to listOf(
+        "RECHAZO_EXPLICITO", "SIN_TIEMPO", "CORTA_LLAMADA", "IDIOMA_DISTINTO", 
+        "FUERA_DE_SEGMENTO", "PERSONA_EQUIVOCADA", "NO_CONTACTAR_NUEVAMENTE"
+    ),
+    ResultadoLlamada.NO_CONTACTADO to listOf(
+        "NO_CONTESTA", "TELEFONO_APAGADO", "OCUPADO", "BUZON_DE_VOZ", 
+        "NUMERO_INVALIDO", "LLAMADA_CAIDA", "FAX_O_TONO"
+    )
 )
 
-// ─── Anti-fraude: duración mínima para poder registrar "No Contesta" ─────────
+private val MOTIVOS_DISPONIBLES = listOf(
+    "DESCONFIANZA", "NO_INTERES", "MALA_EXPERIENCIA", "NO_QUIERE_DATOS",
+    "TRABAJANDO", "OCUPADO", "EN_TRANSITO", "MALA_SENAL"
+)
+
+// Tipificaciones que activan la selección de Motivo
+private val TIPIFICACIONES_CON_MOTIVO = listOf("RECHAZO_EXPLICITO", "SIN_TIEMPO")
+
+// ─── Anti-fraude: duración mínima para permitir ciertos estados ──────────────
 private const val MIN_CALL_DURATION_SEC = 20
 
 // ─── Colores por estado ───────────────────────────────────────────────────────
@@ -103,8 +121,8 @@ fun ContactoScreen(
         // 1. Formulario post-llamada
         postCall != null -> PostCallForm(
             duracion  = postCall!!.duracion,
-            onConfirmar = { resultado, tipo, obs ->
-                viewModel.confirmarRegistro(resultado, tipo, obs)
+            onConfirmar = { resultado, tipo, motivo, obs ->
+                viewModel.confirmarRegistro(resultado, tipo, motivo, obs)
             },
             onCancelar = { viewModel.volverAlListado() }
         )
@@ -206,33 +224,56 @@ fun ContactoListItem(contacto: Contacto, onClick: () -> Unit) {
         shape    = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = color, modifier = Modifier.size(26.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(contacto.nombre, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(contacto.telefono, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Surface(shape = RoundedCornerShape(6.dp), color = color.copy(alpha = 0.15f)) {
-                    Text(estadoLabel(contacto.estado), color = color, fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = color, modifier = Modifier.size(26.dp))
                 }
-                Spacer(Modifier.height(4.dp))
-                Text("${contacto.intentos}/5 intentos", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(contacto.nombre, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(contacto.telefono, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Surface(shape = RoundedCornerShape(6.dp), color = color.copy(alpha = 0.15f)) {
+                        Text(estadoLabel(contacto.estado), color = color, fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text("${contacto.intentos}/5", fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            
+            // Info de última gestión
+            if (contacto.ultimaTipificacion != null) {
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+                Spacer(Modifier.height(8.dp))
+                Column {
+                    Text(
+                        text = "Última gestión: ${contacto.ultimaTipificacion}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!contacto.ultimaObservacion.isNullOrBlank()) {
+                        Text(
+                            text = contacto.ultimaObservacion,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
@@ -300,6 +341,7 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                         Text(contacto.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                     Text("📞 ${contacto.telefono}", fontSize = 15.sp)
+                    
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         val color = estadoColor(contacto.estado)
                         Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.15f)) {
@@ -312,6 +354,17 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                                 color = if (bloqueado) Color(0xFFEF4444) else Color(0xFF10B981),
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                        }
+                    }
+
+                    if (contacto.ultimaTipificacion != null) {
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider(modifier = Modifier.alpha(0.1f))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Última gestión:", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(contacto.ultimaTipificacion!!, fontSize = 14.sp)
+                        if (!contacto.ultimaObservacion.isNullOrBlank()) {
+                            Text(contacto.ultimaObservacion!!, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -334,10 +387,7 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                 Button(
                     onClick = {
                         callPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.CALL_PHONE,
-                                Manifest.permission.READ_PHONE_STATE
-                            )
+                            arrayOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE)
                         )
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -380,27 +430,31 @@ fun CallInProgressScreen(answered: Boolean) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FORMULARIO POST-LLAMADA (resultado obligatorio)
+// FORMULARIO POST-LLAMADA (resultado jerárquico)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostCallForm(
     duracion: Int,
-    onConfirmar: (ResultadoLlamada, String, String) -> Unit,
+    onConfirmar: (ResultadoLlamada, String, String?, String) -> Unit,
     onCancelar: () -> Unit
 ) {
     var resultadoSeleccionado by remember { mutableStateOf<ResultadoLlamada?>(null) }
-    var tipificacion by remember { mutableStateOf(TIPIFICACIONES.first()) }
+    var tipificacion by remember { mutableStateOf<String?>(null) }
+    var motivo       by remember { mutableStateOf<String?>(null) }
     var observacion  by remember { mutableStateOf("") }
+    
     var expandedTip  by remember { mutableStateOf(false) }
-    val errorResultado = resultadoSeleccionado == null
+    var expandedMot  by remember { mutableStateOf(false) }
+
     val noContestaDisabled = duracion < MIN_CALL_DURATION_SEC
+    val showMotivo = tipificacion != null && TIPIFICACIONES_CON_MOTIVO.contains(tipificacion)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrar llamada", fontWeight = FontWeight.Bold) },
+                title = { Text("Registrar resultado", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onCancelar) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Cancelar")
@@ -422,7 +476,6 @@ fun PostCallForm(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Duración detectada
             if (duracion > 0) {
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -435,59 +488,85 @@ fun PostCallForm(
                 }
             }
 
-            // ─── Resultado (OBLIGATORIO) ──────────────────────────────────────
-            Text("Resultado de la llamada *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            if (errorResultado) {
-                Text("⚠ Debes seleccionar un resultado antes de guardar",
-                    color = Color(0xFFF87171), fontSize = 12.sp)
-            }
+            // 1. RESULTADO PRINCIPAL
+            Text("1. Resultado Principal *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            
+            // Warning if not answered enough
             if (noContestaDisabled) {
-                Card(
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF59E0B).copy(alpha = 0.12f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "⚠ La llamada duró menos de ${MIN_CALL_DURATION_SEC}s. \"No Contesta\" solo está disponible para llamadas de mayor duración (validación anti-fraude).",
-                        color = Color(0xFFF59E0B),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
+              Text("⚠ Ciertos estados de \"No Contactado\" requieren una mayor duración detectada.", 
+                  color = Color(0xFFF59E0B), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
             }
+
             ResultadoSelector(
                 selected = resultadoSeleccionado,
-                noContestaDisabled = noContestaDisabled,
-                onSelect = { resultadoSeleccionado = it }
+                onSelect = { 
+                    resultadoSeleccionado = it
+                    tipificacion = null 
+                    motivo = null
+                }
             )
 
-            // ─── Tipificación ─────────────────────────────────────────────────
-            Text("Tipificación", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            ExposedDropdownMenuBox(expanded = expandedTip, onExpandedChange = { expandedTip = it }) {
-                OutlinedTextField(
-                    value = tipificacion,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Seleccionar") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedTip) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                ExposedDropdownMenu(expanded = expandedTip, onDismissRequest = { expandedTip = false }) {
-                    TIPIFICACIONES.forEach { opcion ->
-                        DropdownMenuItem(
-                            text = { Text(opcion) },
-                            onClick = { tipificacion = opcion; expandedTip = false }
+            // 2. TIPIFICACIÓN (Dependiente)
+            AnimatedVisibility(visible = resultadoSeleccionado != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("2. Tipificación *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    val opciones = TIPIFICACIONES_POR_RESULTADO[resultadoSeleccionado] ?: emptyList()
+                    ExposedDropdownMenuBox(expanded = expandedTip, onExpandedChange = { expandedTip = it }) {
+                        OutlinedTextField(
+                            value = tipificacion ?: "Seleccionar...",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedTip) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            isError = tipificacion == null
                         )
+                        ExposedDropdownMenu(expanded = expandedTip, onDismissRequest = { expandedTip = false }) {
+                            opciones.forEach { opcion ->
+                                DropdownMenuItem(
+                                    text = { Text(opcion) },
+                                    onClick = { 
+                                        tipificacion = opcion
+                                        motivo = null
+                                        expandedTip = false 
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // ─── Observación ──────────────────────────────────────────────────
+            // 3. MOTIVO (Opcional, condicional)
+            AnimatedVisibility(visible = showMotivo) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("3. Motivo (Opcional)", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    ExposedDropdownMenuBox(expanded = expandedMot, onExpandedChange = { expandedMot = it }) {
+                        OutlinedTextField(
+                            value = motivo ?: "Seleccionar motivo...",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedMot) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(expanded = expandedMot, onDismissRequest = { expandedMot = false }) {
+                            MOTIVOS_DISPONIBLES.forEach { opcion ->
+                                DropdownMenuItem(
+                                    text = { Text(opcion) },
+                                    onClick = { motivo = opcion; expandedMot = false }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. OBSERVACIÓN
             OutlinedTextField(
                 value = observacion,
                 onValueChange = { observacion = it },
-                label = { Text("Observación (opcional)") },
+                label = { Text("Observación adicional") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 minLines = 3
@@ -495,79 +574,59 @@ fun PostCallForm(
 
             Spacer(Modifier.height(8.dp))
 
-            // ─── Guardar ──────────────────────────────────────────────────────
+            // GUARDAR
             Button(
                 onClick = {
-                    resultadoSeleccionado?.let { r ->
-                        onConfirmar(r, tipificacion, observacion)
+                    if (resultadoSeleccionado != null && tipificacion != null) {
+                        onConfirmar(resultadoSeleccionado!!, tipificacion!!, motivo, observacion)
                     }
                 },
-                enabled = resultadoSeleccionado != null,
+                enabled = resultadoSeleccionado != null && tipificacion != null,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF6366F1),
-                    disabledContainerColor = Color(0xFF4B4F8A)
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
             ) {
                 Icon(Icons.Default.Check, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Guardar y continuar", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text("Guardar Gestión", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         }
     }
 }
 
-// ─── Selector de resultados con chips ─────────────────────────────────────────
 @Composable
 fun ResultadoSelector(
     selected: ResultadoLlamada?,
-    noContestaDisabled: Boolean = false,
     onSelect: (ResultadoLlamada) -> Unit
 ) {
     val opciones = listOf(
-        ResultadoLlamada.CONTESTA    to ("✅ Contesta"   to Color(0xFF10B981)),
-        ResultadoLlamada.NO_CONTESTA to ("❌ No contesta" to Color(0xFFEF4444)),
-        ResultadoLlamada.OCUPADO     to ("⚡ Ocupado"    to Color(0xFFF59E0B)),
-        ResultadoLlamada.INVALIDO    to ("🚫 Inválido"   to Color(0xFF6B7280))
+        ResultadoLlamada.CONTACTADO_EFECTIVO    to ("Efectivo"     to Color(0xFF10B981)),
+        ResultadoLlamada.CONTACTADO_NO_EFECTIVO to ("No Efectivo"  to Color(0xFFF59E0B)),
+        ResultadoLlamada.NO_CONTACTADO         to ("No Contactado" to Color(0xFFEF4444))
     )
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        opciones.chunked(2).forEach { fila ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                fila.forEach { (resultado, labelColor) ->
-                    val (label, color) = labelColor
-                    val isDisabled = resultado == ResultadoLlamada.NO_CONTESTA && noContestaDisabled
-                    val isSelected = selected == resultado && !isDisabled
-                    val displayColor = if (isDisabled) Color(0xFF9CA3AF) else color
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .clickable(enabled = !isDisabled) {
-                                if (!isDisabled) onSelect(resultado)
-                            },
-                        shape = RoundedCornerShape(12.dp),
-                        color = when {
-                            isDisabled  -> Color(0xFFF3F4F6)
-                            isSelected  -> displayColor.copy(alpha = 0.2f)
-                            else        -> MaterialTheme.colorScheme.surface
-                        },
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = if (isSelected) 2.dp else 1.dp,
-                            color = if (isSelected) displayColor else MaterialTheme.colorScheme.outlineVariant
-                        )
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = if (isDisabled) "🔒 No contesta" else label,
-                                color = if (isDisabled) Color(0xFF9CA3AF)
-                                        else if (isSelected) displayColor
-                                        else MaterialTheme.colorScheme.onSurface,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        opciones.forEach { (resultado, labelColor) ->
+            val (label, color) = labelColor
+            val isSelected = selected == resultado
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp)
+                    .clickable { onSelect(resultado) },
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) color else MaterialTheme.colorScheme.outlineVariant
+                )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) color else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }

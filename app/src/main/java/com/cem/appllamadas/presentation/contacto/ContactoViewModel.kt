@@ -115,6 +115,7 @@ class ContactoViewModel @Inject constructor(
     fun confirmarRegistro(
         resultadoSeleccionado: ResultadoLlamada,
         tipificacion: String,
+        motivo: String?,
         observacion: String
     ) {
         val post     = _postCallState.value ?: return
@@ -131,6 +132,7 @@ class ContactoViewModel @Inject constructor(
                 duracion     = post.duracion,
                 resultado    = resultadoSeleccionado,
                 tipificacion = tipificacion,
+                motivo       = motivo,
                 observacion  = observacion.ifBlank { null }
             )
             registrarLlamadaUseCase(llamada, contacto)
@@ -140,7 +142,7 @@ class ContactoViewModel @Inject constructor(
             SyncWorker.dispatchImmediate(context)
 
             // TODO: QuestionPro — activar cuando el módulo de encuestas esté listo
-            // if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
+            // if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "Interesado") {
             //     _mostrarEncuestaDialog.value = contacto.id
             // } else {
             //     volverAlListado()
@@ -153,6 +155,7 @@ class ContactoViewModel @Inject constructor(
     fun registrarLlamadaManual(
         resultadoSeleccionado: ResultadoLlamada,
         tipificacion: String,
+        motivo: String?,
         observacion: String
     ) {
         val contacto = _contactoActual.value ?: return
@@ -169,6 +172,7 @@ class ContactoViewModel @Inject constructor(
                 duracion     = 0,
                 resultado    = resultadoSeleccionado,
                 tipificacion = tipificacion,
+                motivo       = motivo,
                 observacion  = observacion.ifBlank { null }
             )
             registrarLlamadaUseCase(llamada, contacto)
@@ -176,7 +180,7 @@ class ContactoViewModel @Inject constructor(
             SyncWorker.dispatchImmediate(context)
 
             // TODO: QuestionPro — activar cuando el módulo de encuestas esté listo
-            // if (resultadoSeleccionado == ResultadoLlamada.CONTESTA || tipificacion == "Interesado") {
+            // if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "Interesado") {
             //     _mostrarEncuestaDialog.value = contacto.id
             // } else {
             //     volverAlListado()

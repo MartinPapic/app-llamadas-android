@@ -75,6 +75,7 @@ class LlamadaRepositoryImpl(
         duracion     = duracion,
         resultado    = resultado?.name,
         tipificacion = tipificacion,
+        motivo       = motivo,
         observacion  = observacion
     )
 
@@ -87,6 +88,7 @@ class LlamadaRepositoryImpl(
         duracion     = duracion,
         resultado    = resultado,
         tipificacion = tipificacion,
+        motivo       = motivo,
         observacion  = observacion,
         pendienteSync = pendienteSync
     )
@@ -100,6 +102,7 @@ class LlamadaRepositoryImpl(
         duracion     = duracion,
         resultado    = resultado,
         tipificacion = tipificacion,
+        motivo       = motivo,
         observacion  = observacion,
         pendienteSync = pendienteSync
     )

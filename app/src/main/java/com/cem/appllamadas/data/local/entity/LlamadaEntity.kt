@@ -14,6 +14,7 @@ data class LlamadaEntity(
     val duracion: Int?,
     val resultado: ResultadoLlamada?,
     val tipificacion: String?,
+    val motivo: String?,
     val observacion: String?,
     val pendienteSync: Boolean = true
 )

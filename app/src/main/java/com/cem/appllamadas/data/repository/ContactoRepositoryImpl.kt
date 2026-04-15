@@ -62,7 +62,9 @@ class ContactoRepositoryImpl(
         telefono = telefono,
         estado = estado,
         intentos = intentos,
-        fechaCreacion = fechaCreacion
+        fechaCreacion = fechaCreacion,
+        ultimaTipificacion = ultimaTipificacion,
+        ultimaObservacion = ultimaObservacion
     )
 
     private fun Contacto.toEntity() = ContactoEntity(
@@ -71,6 +73,8 @@ class ContactoRepositoryImpl(
         telefono = telefono,
         estado = estado,
         intentos = intentos,
-        fechaCreacion = fechaCreacion
+        fechaCreacion = fechaCreacion,
+        ultimaTipificacion = ultimaTipificacion,
+        ultimaObservacion = ultimaObservacion
     )
 }

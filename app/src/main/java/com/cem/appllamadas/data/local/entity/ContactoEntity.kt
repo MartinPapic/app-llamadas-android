@@ -11,5 +11,7 @@ data class ContactoEntity(
     val telefono: String,
     val estado: EstadoContacto,
     val intentos: Int,
-    val fechaCreacion: Long
+    val fechaCreacion: Long,
+    val ultimaTipificacion: String? = null,
+    val ultimaObservacion: String? = null
 )

@@ -17,14 +17,16 @@ class RegistrarLlamadaUseCase(
         // Evaluar estado del contacto y los intentos
         val nuevosIntentos = contacto.intentos + 1
         val nuevoEstado = when {
-            llamada.resultado == com.cem.appllamadas.domain.model.ResultadoLlamada.CONTESTA -> EstadoContacto.CONTACTADO
+            llamada.resultado == com.cem.appllamadas.domain.model.ResultadoLlamada.CONTACTADO_EFECTIVO -> EstadoContacto.CONTACTADO
             nuevosIntentos >= 5 -> EstadoContacto.DESISTIDO
             else -> EstadoContacto.EN_GESTION
         }
 
         val contactoActualizado = contacto.copy(
             intentos = nuevosIntentos,
-            estado = nuevoEstado
+            estado = nuevoEstado,
+            ultimaTipificacion = llamada.tipificacion,
+            ultimaObservacion = llamada.observacion
         )
         contactoRepository.actualizarContacto(contactoActualizado)
     }

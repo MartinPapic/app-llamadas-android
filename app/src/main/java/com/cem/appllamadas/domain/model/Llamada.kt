@@ -1,7 +1,9 @@
 package com.cem.appllamadas.domain.model
 
 enum class ResultadoLlamada {
-    CONTESTA, NO_CONTESTA, OCUPADO, INVALIDO
+    CONTACTADO_EFECTIVO,
+    CONTACTADO_NO_EFECTIVO,
+    NO_CONTACTADO
 }
 
 data class Llamada(
@@ -13,6 +15,7 @@ data class Llamada(
     val duracion: Int?, // Segundos
     val resultado: ResultadoLlamada?,
     val tipificacion: String?,
+    val motivo: String?,
     val observacion: String?,
     val pendienteSync: Boolean = true
 )

@@ -103,9 +103,9 @@ class CallStateManager @Inject constructor(
                     // If the call ended without OFFHOOK and very quickly,
                     // it was likely not answered (busy, rejected, etc.)
                     val resultado = if (wasAnswered || duracion >= 5)
-                        ResultadoLlamada.CONTESTA
+                        ResultadoLlamada.CONTACTADO_EFECTIVO
                     else
-                        ResultadoLlamada.NO_CONTESTA
+                        ResultadoLlamada.NO_CONTACTADO
 
                     _callState.value = CallState.Ended(
                         CallResult(

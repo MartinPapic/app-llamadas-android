@@ -28,8 +28,9 @@ data class LlamadaDto(
     val fechaInicio: Long,
     val fechaFin: Long?,
     val duracion: Int?,
-    val resultado: String?,      // "CONTESTA", "NO_CONTESTA", "OCUPADO", "INVALIDO"
+    val resultado: String?,      // "CONTACTADO_EFECTIVO", "CONTACTADO_NO_EFECTIVO", "NO_CONTACTADO"
     val tipificacion: String?,
+    val motivo: String?,
     val observacion: String?
 )
 
