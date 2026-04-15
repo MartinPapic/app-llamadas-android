@@ -52,12 +52,11 @@ private val TIPIFICACIONES_POR_RESULTADO = mapOf(
 )
 
 private val MOTIVOS_DISPONIBLES = listOf(
-    "DESCONFIANZA", "NO_INTERES", "MALA_EXPERIENCIA", "NO_QUIERE_DATOS",
-    "TRABAJANDO", "OCUPADO", "EN_TRANSITO", "MALA_SENAL"
+    "N/A (General)", "GESTION_EXITOSA", "TRABAJANDO", "OCUPADO",
+    "EN_TRANSITO", "MALA_SENAL", "DESCONFIANZA", "NO_INTERES", 
+    "MALA_EXPERIENCIA", "NO_QUIERE_DATOS", "IDIOMA_DISTINTO",
+    "POCO_TIEMPO", "SOLICITA_LLAMADA_LUEGO", "DATOS_ERRONEOS"
 )
-
-// Tipificaciones que activan la selección de Motivo
-private val TIPIFICACIONES_CON_MOTIVO = listOf("RECHAZO_EXPLICITO", "SIN_TIEMPO")
 
 // ─── Anti-fraude: duración mínima para permitir ciertos estados ──────────────
 private const val MIN_CALL_DURATION_SEC = 20
@@ -462,7 +461,6 @@ fun PostCallForm(
     var expandedMot  by remember { mutableStateOf(false) }
 
     val noContestaDisabled = duracion < MIN_CALL_DURATION_SEC
-    val showMotivo = tipificacion != null && TIPIFICACIONES_CON_MOTIVO.contains(tipificacion)
 
     Scaffold(
         topBar = {
@@ -550,10 +548,10 @@ fun PostCallForm(
                 }
             }
 
-            // 3. MOTIVO (Opcional, condicional)
-            AnimatedVisibility(visible = showMotivo) {
+            // 3. MOTIVO (Siempre visible y obligatorio)
+            AnimatedVisibility(visible = tipificacion != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("3. Motivo (Opcional)", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text("3. Motivo *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     ExposedDropdownMenuBox(expanded = expandedMot, onExpandedChange = { expandedMot = it }) {
                         OutlinedTextField(
                             value = motivo ?: "Seleccionar motivo...",
@@ -561,7 +559,8 @@ fun PostCallForm(
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedMot) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            isError = tipificacion != null && motivo == null
                         )
                         ExposedDropdownMenu(expanded = expandedMot, onDismissRequest = { expandedMot = false }) {
                             MOTIVOS_DISPONIBLES.forEach { opcion ->
@@ -590,11 +589,11 @@ fun PostCallForm(
             // GUARDAR
             Button(
                 onClick = {
-                    if (resultadoSeleccionado != null && tipificacion != null) {
+                    if (resultadoSeleccionado != null && tipificacion != null && motivo != null) {
                         onConfirmar(resultadoSeleccionado!!, tipificacion!!, motivo, observacion)
                     }
                 },
-                enabled = resultadoSeleccionado != null && tipificacion != null,
+                enabled = resultadoSeleccionado != null && tipificacion != null && motivo != null,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
