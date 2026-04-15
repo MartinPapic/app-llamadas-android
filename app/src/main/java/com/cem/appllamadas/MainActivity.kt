@@ -1,5 +1,6 @@
 package com.cem.appllamadas
 
+// Trigger redeploy: Pool Model & Sync UI Integration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
