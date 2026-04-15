@@ -41,6 +41,9 @@ private val TIPIFICACIONES = listOf(
     "Buzón de voz", "Número inválido", "Reagendar", "Otro"
 )
 
+// ─── Anti-fraude: duración mínima para poder registrar "No Contesta" ─────────
+private const val MIN_CALL_DURATION_SEC = 20
+
 // ─── Colores por estado ───────────────────────────────────────────────────────
 private fun estadoColor(estado: EstadoContacto) = when (estado) {
     EstadoContacto.PENDIENTE   -> Color(0xFF6366F1)
@@ -391,6 +394,7 @@ fun PostCallForm(
     var observacion  by remember { mutableStateOf("") }
     var expandedTip  by remember { mutableStateOf(false) }
     val errorResultado = resultadoSeleccionado == null
+    val noContestaDisabled = duracion < MIN_CALL_DURATION_SEC
 
     Scaffold(
         topBar = {
@@ -436,8 +440,23 @@ fun PostCallForm(
                 Text("⚠ Debes seleccionar un resultado antes de guardar",
                     color = Color(0xFFF87171), fontSize = 12.sp)
             }
+            if (noContestaDisabled) {
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF59E0B).copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "⚠ La llamada duró menos de ${MIN_CALL_DURATION_SEC}s. \"No Contesta\" solo está disponible para llamadas de mayor duración (validación anti-fraude).",
+                        color = Color(0xFFF59E0B),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
             ResultadoSelector(
                 selected = resultadoSeleccionado,
+                noContestaDisabled = noContestaDisabled,
                 onSelect = { resultadoSeleccionado = it }
             )
 
@@ -502,6 +521,7 @@ fun PostCallForm(
 @Composable
 fun ResultadoSelector(
     selected: ResultadoLlamada?,
+    noContestaDisabled: Boolean = false,
     onSelect: (ResultadoLlamada) -> Unit
 ) {
     val opciones = listOf(
@@ -515,20 +535,36 @@ fun ResultadoSelector(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 fila.forEach { (resultado, labelColor) ->
                     val (label, color) = labelColor
-                    val isSelected = selected == resultado
+                    val isDisabled = resultado == ResultadoLlamada.NO_CONTESTA && noContestaDisabled
+                    val isSelected = selected == resultado && !isDisabled
+                    val displayColor = if (isDisabled) Color(0xFF9CA3AF) else color
                     Surface(
-                        modifier = Modifier.weight(1f).height(52.dp).clickable { onSelect(resultado) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                            .clickable(enabled = !isDisabled) {
+                                if (!isDisabled) onSelect(resultado)
+                            },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
+                        color = when {
+                            isDisabled  -> Color(0xFFF3F4F6)
+                            isSelected  -> displayColor.copy(alpha = 0.2f)
+                            else        -> MaterialTheme.colorScheme.surface
+                        },
                         border = androidx.compose.foundation.BorderStroke(
                             width = if (isSelected) 2.dp else 1.dp,
-                            color = if (isSelected) color else MaterialTheme.colorScheme.outlineVariant
+                            color = if (isSelected) displayColor else MaterialTheme.colorScheme.outlineVariant
                         )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(label, color = if (isSelected) color else MaterialTheme.colorScheme.onSurface,
+                            Text(
+                                text = if (isDisabled) "🔒 No contesta" else label,
+                                color = if (isDisabled) Color(0xFF9CA3AF)
+                                        else if (isSelected) displayColor
+                                        else MaterialTheme.colorScheme.onSurface,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 13.sp)
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }

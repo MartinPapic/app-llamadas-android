@@ -36,9 +36,17 @@ class CallStateManager @Inject constructor(
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
     val callState: StateFlow<CallState> = _callState.asStateFlow()
 
-    private var callStartTime: Long = 0L
+    // The moment the user pressed "Call" — before the call connects
+    private var trackingStartTime: Long = 0L
+    // The moment OFFHOOK was detected (call answered)
+    private var offhookTime: Long = 0L
+
     private var wasAnswered: Boolean = false
     private var isTracking: Boolean = false
+
+    // Minimum seconds to consider a call "answered" even if OFFHOOK wasn't detected
+    // This handles API 31+ where OFFHOOK sometimes fires late or not at all
+    private val MIN_CONNECT_THRESHOLD_SEC = 3
 
     private val listener = object : PhoneStateListener() {
         @Suppress("DEPRECATION")
@@ -47,29 +55,47 @@ class CallStateManager @Inject constructor(
 
             when (state) {
                 TelephonyManager.CALL_STATE_OFFHOOK -> {
-                    // Call connected / answered
+                    // Call connected — record the exact answer time
                     wasAnswered = true
-                    callStartTime = System.currentTimeMillis()
+                    offhookTime = System.currentTimeMillis()
                     _callState.value = CallState.Answered
                 }
-                TelephonyManager.CALL_STATE_IDLE -> {
-                    // Call ended
-                    val endTime = System.currentTimeMillis()
-                    val duracion = if (wasAnswered)
-                        ((endTime - callStartTime) / 1000).toInt()
-                    else 0
 
-                    val resultado = if (wasAnswered)
+                TelephonyManager.CALL_STATE_IDLE -> {
+                    val endTime = System.currentTimeMillis()
+
+                    // Primary: use OFFHOOK time if we captured it
+                    // Fallback: if call lasted > threshold from tracking start, treat as answered
+                    val elapsedSinceTracking = ((endTime - trackingStartTime) / 1000).toInt()
+                    val probablyAnswered = wasAnswered || elapsedSinceTracking >= MIN_CONNECT_THRESHOLD_SEC
+
+                    val (duracion, fechaInicio) = when {
+                        wasAnswered -> {
+                            // We have a precise answer time
+                            val secs = ((endTime - offhookTime) / 1000).toInt()
+                            Pair(secs, offhookTime)
+                        }
+                        probablyAnswered -> {
+                            // OFFHOOK missed (common on Android 12+), use tracking start as proxy
+                            Pair(elapsedSinceTracking, trackingStartTime)
+                        }
+                        else -> {
+                            // Truly not answered (short ring, immediate hang-up)
+                            Pair(0, endTime)
+                        }
+                    }
+
+                    val resultado = if (probablyAnswered)
                         ResultadoLlamada.CONTESTA
                     else
                         ResultadoLlamada.NO_CONTESTA
 
                     _callState.value = CallState.Ended(
                         CallResult(
-                            resultado = resultado,
-                            duracion = duracion,
-                            fechaInicio = if (wasAnswered) callStartTime else endTime,
-                            fechaFin = endTime
+                            resultado   = resultado,
+                            duracion    = duracion,
+                            fechaInicio = fechaInicio,
+                            fechaFin    = endTime
                         )
                     )
                     stopTracking()
@@ -82,7 +108,8 @@ class CallStateManager @Inject constructor(
     fun startTracking() {
         if (isTracking) return
         wasAnswered = false
-        callStartTime = System.currentTimeMillis()
+        offhookTime = 0L
+        trackingStartTime = System.currentTimeMillis()
         isTracking = true
         _callState.value = CallState.Calling
         telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
