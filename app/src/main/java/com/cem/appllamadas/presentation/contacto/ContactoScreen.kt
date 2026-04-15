@@ -176,7 +176,7 @@ fun ContactoListadoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
                 },
                 actions = {
                     IconButton(onClick = { viewModel.forceRefresh() }) {
-                        Icon(androidx.compose.material.icons.filled.Refresh, contentDescription = "Actualizar", tint = Color.White)
+                        Icon(Icons.Default.Person, contentDescription = "Actualizar", tint = Color.White)
                     }
                     IconButton(onClick = onLogout) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
