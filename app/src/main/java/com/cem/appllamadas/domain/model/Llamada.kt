@@ -17,5 +17,6 @@ data class Llamada(
     val tipificacion: String?,
     val motivo: String?,
     val observacion: String?,
+    val proyectoId: String? = null,
     val pendienteSync: Boolean = true
 )

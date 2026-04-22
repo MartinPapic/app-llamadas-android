@@ -41,15 +41,64 @@ class ContactoViewModel @Inject constructor(
     private val registrarLlamadaUseCase: RegistrarLlamadaUseCase,
     private val contactoRepository: ContactoRepository,
     private val encuestaRepository: EncuestaRepository,
+    private val proyectoRepository: com.cem.appllamadas.domain.repository.ProyectoRepository,
     private val sessionManager: SessionManager,
     val callStateManager: CallStateManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // ─── Lista completa de contactos (para el listado) ────────────────────────
-    val todosLosContactos: StateFlow<List<Contacto>> = contactoRepository
-        .getAllContactos()
+    // ─── Proyectos asignados ──────────────────────────────────────────────────
+    val proyectos: StateFlow<List<com.cem.appllamadas.data.local.entity.ProyectoEntity>> = proyectoRepository
+        .getAllProyectos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _proyectoSeleccionado = MutableStateFlow<com.cem.appllamadas.data.local.entity.ProyectoEntity?>(null)
+    val proyectoSeleccionado: StateFlow<com.cem.appllamadas.data.local.entity.ProyectoEntity?> = _proyectoSeleccionado.asStateFlow()
+
+    // ─── Lista filtrada por proyecto ──────────────────────────────────────────
+    private val _todosLosContactos = MutableStateFlow<List<Contacto>>(emptyList())
+    val todosLosContactos: StateFlow<List<Contacto>> = _todosLosContactos.asStateFlow()
+
+    init {
+        observeCallState()
+        syncProyectos()
+        observeContactos()
+    }
+
+    private fun syncProyectos() {
+        viewModelScope.launch {
+            proyectoRepository.syncProyectosDesdeServidor()
+        }
+    }
+
+    private fun observeContactos() {
+        viewModelScope.launch {
+            contactoRepository.getAllContactos().collect { lista ->
+                val proyecto = _proyectoSeleccionado.value
+                _todosLosContactos.value = if (proyecto != null) {
+                    lista.filter { it.proyectoId == proyecto.id }
+                } else {
+                    lista
+                }
+            }
+        }
+    }
+
+    fun seleccionarProyecto(proyecto: com.cem.appllamadas.data.local.entity.ProyectoEntity) {
+        _proyectoSeleccionado.value = proyecto
+        // Forzar refiltrado
+        viewModelScope.launch {
+            val lista = contactoRepository.getAllContactos().stateIn(viewModelScope).value
+            _todosLosContactos.value = lista.filter { it.proyectoId == proyecto.id }
+        }
+    }
+
+    fun deseleccionarProyecto() {
+        _proyectoSeleccionado.value = null
+        viewModelScope.launch {
+            _todosLosContactos.value = contactoRepository.getAllContactos().stateIn(viewModelScope).value
+        }
+    }
 
     // ─── Contacto seleccionado actualmente ───────────────────────────────────
     private val _contactoActual = MutableStateFlow<Contacto?>(null)
@@ -169,7 +218,8 @@ class ContactoViewModel @Inject constructor(
                 resultado    = resultadoSeleccionado,
                 tipificacion = tipificacion,
                 motivo       = motivo,
-                observacion  = observacion.ifBlank { null }
+                observacion  = observacion.ifBlank { null },
+                proyectoId   = _proyectoSeleccionado.value?.id
             )
             registrarLlamadaUseCase(llamada, contacto)
             _postCallState.value = null
@@ -177,13 +227,16 @@ class ContactoViewModel @Inject constructor(
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
 
-            // TODO: QuestionPro — activar cuando el módulo de encuestas esté listo
-            // if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "Interesado") {
-            //     _mostrarEncuestaDialog.value = contacto.id
-            // } else {
-            //     volverAlListado()
-            // }
-            volverAlListado()
+            if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "CONTACTADO") {
+                val url = _proyectoSeleccionado.value?.instrumentoUrl
+                if (!url.isNullOrBlank()) {
+                    _mostrarEncuestaDialog.value = url
+                } else {
+                    volverAlListado()
+                }
+            } else {
+                volverAlListado()
+            }
         }
     }
 
@@ -209,19 +262,23 @@ class ContactoViewModel @Inject constructor(
                 resultado    = resultadoSeleccionado,
                 tipificacion = tipificacion,
                 motivo       = motivo,
-                observacion  = observacion.ifBlank { null }
+                observacion  = observacion.ifBlank { null },
+                proyectoId   = _proyectoSeleccionado.value?.id
             )
             registrarLlamadaUseCase(llamada, contacto)
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
 
-            // TODO: QuestionPro — activar cuando el módulo de encuestas esté listo
-            // if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "Interesado") {
-            //     _mostrarEncuestaDialog.value = contacto.id
-            // } else {
-            //     volverAlListado()
-            // }
-            volverAlListado()
+            if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "CONTACTADO") {
+                val url = _proyectoSeleccionado.value?.instrumentoUrl
+                if (!url.isNullOrBlank()) {
+                    _mostrarEncuestaDialog.value = url
+                } else {
+                    volverAlListado()
+                }
+            } else {
+                volverAlListado()
+            }
         }
     }
 

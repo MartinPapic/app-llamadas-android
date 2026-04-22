@@ -76,7 +76,8 @@ class LlamadaRepositoryImpl(
         resultado    = resultado?.name,
         tipificacion = tipificacion,
         motivo       = motivo,
-        observacion  = observacion
+        observacion  = observacion,
+        proyectoId   = proyectoId
     )
 
     private fun LlamadaEntity.toDomain() = Llamada(
@@ -90,6 +91,7 @@ class LlamadaRepositoryImpl(
         tipificacion = tipificacion,
         motivo       = motivo,
         observacion  = observacion,
+        proyectoId   = proyectoId,
         pendienteSync = pendienteSync
     )
 
@@ -104,6 +106,7 @@ class LlamadaRepositoryImpl(
         tipificacion = tipificacion,
         motivo       = motivo,
         observacion  = observacion,
+        proyectoId   = proyectoId,
         pendienteSync = pendienteSync
     )
 }

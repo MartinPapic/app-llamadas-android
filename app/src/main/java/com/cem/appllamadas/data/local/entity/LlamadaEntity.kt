@@ -16,5 +16,6 @@ data class LlamadaEntity(
     val tipificacion: String?,
     val motivo: String?,
     val observacion: String?,
+    val proyectoId: String?,
     val pendienteSync: Boolean = true
 )

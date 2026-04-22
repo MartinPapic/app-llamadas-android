@@ -31,7 +31,15 @@ data class LlamadaDto(
     val resultado: String?,      // "CONTACTADO_EFECTIVO", "CONTACTADO_NO_EFECTIVO", "NO_CONTACTADO"
     val tipificacion: String?,
     val motivo: String?,
-    val observacion: String?
+    val observacion: String?,
+    val proyectoId: String?
+)
+
+data class ProyectoDto(
+    val id: String,
+    val nombre: String,
+    val instrumentoUrl: String,
+    val fechaCreacion: Long
 )
 
 data class ContactoDto(
@@ -79,4 +87,8 @@ interface ApiService {
     /** Bloqueo preventivo de contacto antes de llamar ( Pool Model ) */
     @POST("/contacts/{id}/lock")
     suspend fun lockContacto(@retrofit2.http.Path("id") id: String): Response<Map<String, Any>>
+
+    /** Obtener proyectos asignados al agente */
+    @GET("/api/proyectos/agente")
+    suspend fun getProyectosAgente(): Response<List<ProyectoDto>>
 }

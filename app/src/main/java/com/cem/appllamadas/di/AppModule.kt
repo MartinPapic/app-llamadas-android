@@ -8,6 +8,7 @@ import com.cem.appllamadas.data.remote.ApiService
 import com.cem.appllamadas.data.remote.AuthApiService
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import com.cem.appllamadas.domain.repository.LlamadaRepository
+import com.cem.appllamadas.domain.repository.ProyectoRepository
 import com.cem.appllamadas.domain.usecase.ObtenerSiguienteContactoUseCase
 import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
 import dagger.Module
@@ -93,6 +94,11 @@ object AppModule {
     }
 
     @Provides
+    fun provideProyectoDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.ProyectoDao {
+        return appDatabase.proyectoDao
+    }
+
+    @Provides
     @Singleton
     fun provideContactoRepository(
         dao: com.cem.appllamadas.data.local.dao.ContactoDao,
@@ -118,6 +124,15 @@ object AppModule {
         apiService: ApiService
     ): com.cem.appllamadas.domain.repository.EncuestaRepository {
         return com.cem.appllamadas.data.repository.EncuestaRepositoryImpl(dao, apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProyectoRepository(
+        dao: com.cem.appllamadas.data.local.dao.ProyectoDao,
+        apiService: ApiService
+    ): ProyectoRepository {
+        return com.cem.appllamadas.data.repository.ProyectoRepositoryImpl(dao, apiService)
     }
 
     @Provides

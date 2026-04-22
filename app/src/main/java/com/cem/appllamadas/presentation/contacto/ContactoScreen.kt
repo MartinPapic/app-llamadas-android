@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
@@ -36,18 +37,18 @@ import com.cem.appllamadas.domain.model.Contacto
 import com.cem.appllamadas.domain.model.EstadoContacto
 import com.cem.appllamadas.domain.model.ResultadoLlamada
 
-// ─── Estructura de Tipificaciones Jerárquicas ────────────────────────────────
+// ─── Estructura de Tipificaciones Jerárquicas (OFICIAL) ──────────────────────
 private val TIPIFICACIONES_POR_RESULTADO = mapOf(
     ResultadoLlamada.CONTACTADO_EFECTIVO to listOf(
-        "ENCUESTA_COMPLETA", "ENCUESTA_PARCIAL", "AGENDA_CALLBACK", "DERIVADO_A_OTRO"
+        "CONTACTADO", "ENVIAR_MAIL"
     ),
     ResultadoLlamada.CONTACTADO_NO_EFECTIVO to listOf(
-        "RECHAZO_EXPLICITO", "SIN_TIEMPO", "CORTA_LLAMADA", "IDIOMA_DISTINTO", 
-        "FUERA_DE_SEGMENTO", "PERSONA_EQUIVOCADA", "NO_CONTACTAR_NUEVAMENTE"
+        "LLAMAR_MAS_TARDE", "NO_QUIERE_PARTICIPAR", "DESISTIO_PROYECTO", 
+        "DESCONFIANZA_ENCUESTA"
     ),
     ResultadoLlamada.NO_CONTACTADO to listOf(
-        "NO_CONTESTA", "TELEFONO_APAGADO", "OCUPADO", "BUZON_DE_VOZ", 
-        "NUMERO_INVALIDO", "LLAMADA_CAIDA", "FAX_O_TONO"
+        "NO_CONTESTA", "FUERA_DE_SERVICIO", "TELEFONO_APAGADO", 
+        "NUMERO_NO_CORRESPONDE", "NUMERO_NO_EXISTE"
     )
 )
 
@@ -85,7 +86,8 @@ private fun estadoLabel(estado: EstadoContacto) = when (estado) {
 fun ContactoScreen(
     viewModel: ContactoViewModel,
     onLogout: () -> Unit,
-    onAbrirEncuesta: (String) -> Unit
+    onAbrirEncuesta: (String) -> Unit,
+    onVolverAProyectos: () -> Unit
 ) {
     val mostrarListado by viewModel.mostrarListado.collectAsState()
     val contacto       by viewModel.contactoActual.collectAsState()
@@ -110,6 +112,13 @@ fun ContactoScreen(
                 }
             }
         )
+    }
+
+    // Efecto para abrir encuesta cuando el viewModel lo indique
+    LaunchedEffect(mostrarDialog) {
+        if (mostrarDialog != null) {
+            onAbrirEncuesta(mostrarDialog!!)
+        }
     }
 
     if (isLoading) {
@@ -145,7 +154,11 @@ fun ContactoScreen(
         )
 
         // 4. Listado de contactos
-        else -> ContactoListadoScreen(viewModel = viewModel, onLogout = onLogout)
+        else -> ContactoListadoScreen(
+            viewModel = viewModel, 
+            onLogout = onLogout,
+            onCambiarProyecto = onVolverAProyectos
+        )
     }
 }
 
@@ -155,7 +168,12 @@ fun ContactoScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactoListadoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
+fun ContactoListadoScreen(
+    viewModel: ContactoViewModel, 
+    onLogout: () -> Unit,
+    onCambiarProyecto: () -> Unit
+) {
+    val proyectoActual by viewModel.proyectoSeleccionado.collectAsState()
     val contactos by viewModel.todosLosContactos.collectAsState()
     val pendientes = contactos.filter {
         it.estado != EstadoContacto.DESISTIDO && it.estado != EstadoContacto.CONTACTADO
@@ -169,17 +187,17 @@ fun ContactoListadoScreen(viewModel: ContactoViewModel, onLogout: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text("App Llamadas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(proyectoActual?.nombre ?: "App Llamadas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("${pendientes.size} pendientes · ${contactos.size} total",
-                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
+                            fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.forceRefresh() }) {
-                        Icon(Icons.Default.Person, contentDescription = "Actualizar", tint = Color.White)
+                    IconButton(onClick = onCambiarProyecto) {
+                        Icon(Icons.Default.Assignment, contentDescription = "Cambiar Proyecto", tint = Color.White)
                     }
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

@@ -13,5 +13,6 @@ data class ContactoEntity(
     val intentos: Int,
     val fechaCreacion: Long,
     val ultimaTipificacion: String? = null,
-    val ultimaObservacion: String? = null
+    val ultimaObservacion: String? = null,
+    val proyectoId: String? = null
 )

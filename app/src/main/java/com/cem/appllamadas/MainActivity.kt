@@ -12,6 +12,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.presentation.contacto.ContactoScreen
 import com.cem.appllamadas.presentation.contacto.ContactoViewModel
@@ -39,8 +41,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // Si hay sesión activa, ir directo a contacto; si no, al login
-                    val startDestination = if (sessionManager.isLoggedIn()) "contacto" else "login"
+                    // Si hay sesión activa, ir a selección de proyecto; si no, al login
+                    val startDestination = if (sessionManager.isLoggedIn()) "seleccion_proyecto" else "login"
 
                     NavHost(navController = navController, startDestination = startDestination) {
 
@@ -49,8 +51,24 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 viewModel = viewModel,
                                 onLoginSuccess = {
-                                    navController.navigate("contacto") {
+                                    navController.navigate("seleccion_proyecto") {
                                         popUpTo("login") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        composable("seleccion_proyecto") {
+                            val viewModel = hiltViewModel<ContactoViewModel>()
+                            com.cem.appllamadas.presentation.proyecto.ProjectSelectionScreen(
+                                viewModel = viewModel,
+                                onProjectSelected = {
+                                    navController.navigate("contacto")
+                                },
+                                onLogout = {
+                                    viewModel.logout()
+                                    navController.navigate("login") {
+                                        popUpTo(0) { inclusive = true }
                                     }
                                 }
                             )
@@ -58,6 +76,15 @@ class MainActivity : ComponentActivity() {
 
                         composable("contacto") {
                             val viewModel = hiltViewModel<ContactoViewModel>()
+                            val proyectoSeleccionado by viewModel.proyectoSeleccionado.collectAsState()
+                            
+                            // Si por algún motivo perdemos el proyecto, volver a selección
+                            if (proyectoSeleccionado == null) {
+                                navController.navigate("seleccion_proyecto") {
+                                    popUpTo("contacto") { inclusive = true }
+                                }
+                            }
+
                             ContactoScreen(
                                 viewModel = viewModel,
                                 onLogout = {
@@ -66,20 +93,25 @@ class MainActivity : ComponentActivity() {
                                         popUpTo(0) { inclusive = true }
                                     }
                                 },
-                                onAbrirEncuesta = { contactoId ->
-                                    navController.navigate("encuesta/$contactoId")
+                                onAbrirEncuesta = { url ->
+                                    // Ahora pasamos la URL directamente desde el ViewModel
+                                    navController.navigate("encuesta?url=${java.net.URLEncoder.encode(url, "UTF-8")}")
+                                },
+                                onVolverAProyectos = {
+                                    viewModel.deseleccionarProyecto()
+                                    navController.navigate("seleccion_proyecto") {
+                                        popUpTo("contacto") { inclusive = true }
+                                    }
                                 }
                             )
                         }
 
-                        composable("encuesta/{contactoId}") { backStackEntry ->
-                            val contactoId = backStackEntry.arguments?.getString("contactoId") ?: ""
-                            // Usamos URL de prueba según lo solicitado por el usuario
-                            val url = "https://www.questionpro.com/t/demo?contacto_id=${contactoId}"
+                        composable("encuesta?url={url}") { backStackEntry ->
+                            val url = backStackEntry.arguments?.getString("url") ?: ""
                             val viewModel = hiltViewModel<EncuestaViewModel>()
 
                             EncuestaScreen(
-                                contactoId = contactoId,
+                                contactoId = "temp", // El ID ya está en la URL si QuestionPro lo requiere
                                 url = url,
                                 viewModel = viewModel,
                                 onFinished = {
