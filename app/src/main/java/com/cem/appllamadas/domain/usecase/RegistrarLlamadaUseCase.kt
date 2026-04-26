@@ -10,7 +10,7 @@ class RegistrarLlamadaUseCase(
     private val llamadaRepository: LlamadaRepository,
     private val contactoRepository: ContactoRepository
 ) {
-    suspend operator fun invoke(llamada: Llamada, contacto: Contacto) {
+    suspend operator fun invoke(llamada: Llamada, contacto: Contacto, cierraCaso: Boolean = false) {
         // Guardar llamada en base de datos local
         llamadaRepository.registrarLlamada(llamada)
 
@@ -18,7 +18,7 @@ class RegistrarLlamadaUseCase(
         val nuevosIntentos = contacto.intentos + 1
         val nuevoEstado = when {
             llamada.resultado == com.cem.appllamadas.domain.model.ResultadoLlamada.CONTACTADO_EFECTIVO -> EstadoContacto.CONTACTADO
-            llamada.tipificacion == "RECHAZO_EXPLICITO" -> EstadoContacto.DESISTIDO
+            cierraCaso -> EstadoContacto.DESISTIDO
             nuevosIntentos >= 5 -> EstadoContacto.DESISTIDO
             else -> EstadoContacto.EN_GESTION
         }

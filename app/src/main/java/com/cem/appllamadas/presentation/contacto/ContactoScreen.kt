@@ -37,20 +37,6 @@ import com.cem.appllamadas.domain.model.Contacto
 import com.cem.appllamadas.domain.model.EstadoContacto
 import com.cem.appllamadas.domain.model.ResultadoLlamada
 
-// ─── Estructura de Tipificaciones Jerárquicas (OFICIAL) ──────────────────────
-private val TIPIFICACIONES_POR_RESULTADO = mapOf(
-    ResultadoLlamada.CONTACTADO_EFECTIVO to listOf(
-        "CONTACTADO", "ENVIAR_MAIL"
-    ),
-    ResultadoLlamada.CONTACTADO_NO_EFECTIVO to listOf(
-        "LLAMAR_MAS_TARDE", "NO_QUIERE_PARTICIPAR", "DESISTIO_PROYECTO", 
-        "DESCONFIANZA_ENCUESTA"
-    ),
-    ResultadoLlamada.NO_CONTACTADO to listOf(
-        "NO_CONTESTA", "FUERA_DE_SERVICIO", "TELEFONO_APAGADO", 
-        "NUMERO_NO_CORRESPONDE", "NUMERO_NO_EXISTE"
-    )
-)
 
 private val MOTIVOS_DISPONIBLES = listOf(
     "N/A (General)", "GESTION_EXITOSA", "TRABAJANDO", "OCUPADO",
@@ -86,16 +72,16 @@ private fun estadoLabel(estado: EstadoContacto) = when (estado) {
 fun ContactoScreen(
     viewModel: ContactoViewModel,
     onLogout: () -> Unit,
-    onAbrirEncuesta: (String) -> Unit,
     onVolverAProyectos: () -> Unit
 ) {
     val mostrarListado by viewModel.mostrarListado.collectAsState()
     val contacto       by viewModel.contactoActual.collectAsState()
     val callState      by viewModel.callStateManager.callState.collectAsState()
     val postCall       by viewModel.postCallState.collectAsState()
-    val mostrarDialog  by viewModel.mostrarEncuestaDialog.collectAsState()
     val isLoading      by viewModel.isLoading.collectAsState()
     val errorConcurrencia by viewModel.errorConcurrencia.collectAsState()
+
+    val tipificaciones by viewModel.tipificaciones.collectAsState()
 
     // Manejo de Error de Concurrencia (Pool Model)
     if (errorConcurrencia != null) {
@@ -114,12 +100,6 @@ fun ContactoScreen(
         )
     }
 
-    // Efecto para abrir encuesta cuando el viewModel lo indique
-    LaunchedEffect(mostrarDialog) {
-        if (mostrarDialog != null) {
-            onAbrirEncuesta(mostrarDialog!!)
-        }
-    }
 
     if (isLoading) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
@@ -137,6 +117,7 @@ fun ContactoScreen(
         // 1. Formulario post-llamada
         postCall != null -> PostCallForm(
             duracion  = postCall!!.duracion,
+            tipificaciones = tipificaciones,
             onConfirmar = { resultado, tipo, motivo, obs ->
                 viewModel.confirmarRegistro(resultado, tipo, motivo, obs)
             },
@@ -315,7 +296,8 @@ fun ContactoListItem(contacto: Contacto, onClick: () -> Unit) {
 @Composable
 fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
     val context = LocalContext.current
-
+    val historial by viewModel.historialLlamadas.collectAsState()
+    
     val callPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -429,6 +411,40 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                     Text("Llamar ahora", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
+
+            // Historial de Llamadas
+            if (historial.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Historial de Llamadas", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                
+                historial.forEach { llamada ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(
+                                    text = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(llamada.fechaInicio)),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${llamada.duracion ?: 0}s",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(llamada.tipificacion ?: "Sin tipificar", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            if (!llamada.observacion.isNullOrBlank()) {
+                                Text(llamada.observacion, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -467,6 +483,7 @@ fun CallInProgressScreen(answered: Boolean) {
 @Composable
 fun PostCallForm(
     duracion: Int,
+    tipificaciones: List<com.cem.appllamadas.domain.model.Tipificacion>,
     onConfirmar: (ResultadoLlamada, String, String?, String) -> Unit,
     onCancelar: () -> Unit
 ) {
@@ -539,7 +556,7 @@ fun PostCallForm(
             AnimatedVisibility(visible = resultadoSeleccionado != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("2. Tipificación *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    val opciones = TIPIFICACIONES_POR_RESULTADO[resultadoSeleccionado] ?: emptyList()
+                    val opciones = tipificaciones.filter { it.resultado == resultadoSeleccionado?.name }.map { it.nombre }
                     ExposedDropdownMenuBox(expanded = expandedTip, onExpandedChange = { expandedTip = it }) {
                         OutlinedTextField(
                             value = tipificacion ?: "Seleccionar...",

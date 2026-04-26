@@ -11,6 +11,8 @@ import com.cem.appllamadas.domain.model.Contacto
 import com.cem.appllamadas.domain.model.Llamada
 import com.cem.appllamadas.domain.model.ResultadoLlamada
 import com.cem.appllamadas.domain.repository.LlamadaRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class LlamadaRepositoryImpl(
     private val llamadaDao: LlamadaDao,
@@ -22,6 +24,31 @@ class LlamadaRepositoryImpl(
 
     override suspend fun registrarLlamada(llamada: Llamada) {
         llamadaDao.insertLlamada(llamada.toEntity())
+    }
+
+    override suspend fun marcarComoSincronizada(id: String) {
+        llamadaDao.marcarSincronizada(id)
+    }
+
+    override fun getHistorialByContacto(contactoId: String): Flow<List<Llamada>> {
+        return llamadaDao.getLlamadasByContactoId(contactoId).map { entities ->
+            entities.map { entity ->
+                Llamada(
+                    id = entity.id,
+                    contactoId = entity.contactoId,
+                    usuarioId = entity.usuarioId,
+                    proyectoId = entity.proyectoId,
+                    fechaInicio = entity.fechaInicio,
+                    fechaFin = entity.fechaFin,
+                    duracion = entity.duracion,
+                    resultado = entity.resultado,
+                    tipificacion = entity.tipificacion,
+                    motivo = entity.motivo,
+                    observacion = entity.observacion,
+                    pendienteSync = entity.pendienteSync
+                )
+            }
+        }
     }
 
     // ─── Sincronización batch con el backend ──────────────────────────────────

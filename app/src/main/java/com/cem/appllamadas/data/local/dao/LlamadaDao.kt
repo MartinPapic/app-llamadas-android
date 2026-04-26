@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.cem.appllamadas.data.local.entity.LlamadaEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LlamadaDao {
@@ -20,4 +21,7 @@ interface LlamadaDao {
 
     @Query("UPDATE llamada SET pendienteSync = 0 WHERE id = :id")
     suspend fun marcarSincronizada(id: String)
+
+    @Query("SELECT * FROM llamada WHERE contactoId = :contactoId ORDER BY fechaInicio DESC")
+    fun getLlamadasByContactoId(contactoId: String): Flow<List<LlamadaEntity>>
 }

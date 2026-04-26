@@ -10,11 +10,11 @@ import com.cem.appllamadas.domain.model.Contacto
 import com.cem.appllamadas.domain.model.Llamada
 import com.cem.appllamadas.domain.model.ResultadoLlamada
 import com.cem.appllamadas.domain.repository.ContactoRepository
+import com.cem.appllamadas.domain.repository.TipificacionRepository
+import com.cem.appllamadas.domain.model.Tipificacion
 import com.cem.appllamadas.domain.usecase.ObtenerSiguienteContactoUseCase
 import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
-import com.cem.appllamadas.domain.repository.EncuestaRepository
-import com.cem.appllamadas.domain.model.Encuesta
-import com.cem.appllamadas.domain.model.EstadoEncuesta
+import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
 import com.cem.appllamadas.worker.SyncWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -40,8 +40,9 @@ class ContactoViewModel @Inject constructor(
     private val obtenerSiguienteContactoUseCase: ObtenerSiguienteContactoUseCase,
     private val registrarLlamadaUseCase: RegistrarLlamadaUseCase,
     private val contactoRepository: ContactoRepository,
-    private val encuestaRepository: EncuestaRepository,
+    private val tipificacionRepository: TipificacionRepository,
     private val proyectoRepository: com.cem.appllamadas.domain.repository.ProyectoRepository,
+    private val llamadaRepository: com.cem.appllamadas.domain.repository.LlamadaRepository,
     private val sessionManager: SessionManager,
     val callStateManager: CallStateManager,
     @ApplicationContext private val context: Context
@@ -63,6 +64,16 @@ class ContactoViewModel @Inject constructor(
         observeCallState()
         syncProyectos()
         observeContactos()
+        observeTipificaciones()
+    }
+
+    private fun observeTipificaciones() {
+        viewModelScope.launch {
+            tipificacionRepository.syncTipificaciones()
+            tipificacionRepository.getAll().collect { tips ->
+                _tipificaciones.value = tips
+            }
+        }
     }
 
     private fun syncProyectos() {
@@ -115,9 +126,13 @@ class ContactoViewModel @Inject constructor(
     private val _mostrarListado = MutableStateFlow(true)
     val mostrarListado: StateFlow<Boolean> = _mostrarListado.asStateFlow()
 
-    // ─── Estado del Dialogo de Encuesta ───────────────────────────────────────
-    private val _mostrarEncuestaDialog = MutableStateFlow<String?>(null)
-    val mostrarEncuestaDialog: StateFlow<String?> = _mostrarEncuestaDialog.asStateFlow()
+    private val _tipificaciones = MutableStateFlow<List<Tipificacion>>(emptyList())
+    val tipificaciones: StateFlow<List<Tipificacion>> = _tipificaciones.asStateFlow()
+
+    private val _historialLlamadas = MutableStateFlow<List<Llamada>>(emptyList())
+    val historialLlamadas: StateFlow<List<Llamada>> = _historialLlamadas.asStateFlow()
+    private var historialJob: kotlinx.coroutines.Job? = null
+
 
     // ─── Estado de error de concurrencia (Pool Model) ─────────────────────────
     private val _errorConcurrencia = MutableStateFlow<String?>(null)
@@ -147,6 +162,12 @@ class ContactoViewModel @Inject constructor(
     fun seleccionarContacto(contacto: Contacto) {
         _contactoActual.value = contacto
         _mostrarListado.value = false
+        historialJob?.cancel()
+        historialJob = viewModelScope.launch {
+            llamadaRepository.getHistorialByContacto(contacto.id).collect {
+                _historialLlamadas.value = it
+            }
+        }
     }
 
     /** Vuelve al listado desde el detalle */
@@ -155,6 +176,8 @@ class ContactoViewModel @Inject constructor(
         _contactoActual.value = null
         callStateManager.resetState()
         _postCallState.value = null
+        historialJob?.cancel()
+        _historialLlamadas.value = emptyList()
     }
 
     fun resetErrorConcurrencia() {
@@ -221,22 +244,17 @@ class ContactoViewModel @Inject constructor(
                 observacion  = observacion.ifBlank { null },
                 proyectoId   = _proyectoSeleccionado.value?.id
             )
-            registrarLlamadaUseCase(llamada, contacto)
+            
+            val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
+            val cierraCaso = tipObj?.cierraCaso ?: false
+
+            registrarLlamadaUseCase(llamada, contacto, cierraCaso)
             _postCallState.value = null
             callStateManager.resetState()
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
 
-            if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "CONTACTADO") {
-                val url = _proyectoSeleccionado.value?.instrumentoUrl
-                if (!url.isNullOrBlank()) {
-                    _mostrarEncuestaDialog.value = url
-                } else {
-                    volverAlListado()
-                }
-            } else {
-                volverAlListado()
-            }
+            volverAlListado()
         }
     }
 
@@ -265,45 +283,17 @@ class ContactoViewModel @Inject constructor(
                 observacion  = observacion.ifBlank { null },
                 proyectoId   = _proyectoSeleccionado.value?.id
             )
-            registrarLlamadaUseCase(llamada, contacto)
+            val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
+            val cierraCaso = tipObj?.cierraCaso ?: false
+
+            registrarLlamadaUseCase(llamada, contacto, cierraCaso)
             // Sync inmediato si hay red
             SyncWorker.dispatchImmediate(context)
 
-            if (resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO || tipificacion == "CONTACTADO") {
-                val url = _proyectoSeleccionado.value?.instrumentoUrl
-                if (!url.isNullOrBlank()) {
-                    _mostrarEncuestaDialog.value = url
-                } else {
-                    volverAlListado()
-                }
-            } else {
-                volverAlListado()
-            }
-        }
-    }
-
-    fun rechazarEncuestaDialog() {
-        val contactoId = _mostrarEncuestaDialog.value ?: return
-        viewModelScope.launch {
-            val encuesta = Encuesta(
-                id = UUID.randomUUID().toString(),
-                contactoId = contactoId,
-                url = "", // no procede
-                estado = EstadoEncuesta.NO_REALIZADA,
-                fecha = System.currentTimeMillis()
-            )
-            encuestaRepository.guardarEncuesta(encuesta)
-            SyncWorker.dispatchImmediate(context)
-            _mostrarEncuestaDialog.value = null
             volverAlListado()
         }
     }
 
-    fun aceptarEncuestaDialog() {
-        // Solo limpiamos el dialog, la UI se encargará de navegar pasándole el ID guardado
-        _mostrarEncuestaDialog.value = null
-        // No llamamos volverAlListado() aún, la idea es que la UI navegue a EncuestaScreen con ese ID.
-    }
 
     fun logout() {
         sessionManager.clearSession()

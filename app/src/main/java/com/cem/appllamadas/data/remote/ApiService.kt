@@ -38,7 +38,7 @@ data class LlamadaDto(
 data class ProyectoDto(
     val id: String,
     val nombre: String,
-    val instrumentoUrl: String,
+    val estado: String,
     val fechaCreacion: Long
 )
 
@@ -51,18 +51,13 @@ data class ContactoDto(
     val fechaCreacion: Long
 )
 
-// DTOs para Encuesta
-data class EncuestaDto(
+data class TipificacionDto(
     val id: String,
-    val contactoId: String,
-    val url: String,
-    val estado: String,          // "COMPLETA", "INCOMPLETA", "NO_REALIZADA"
-    val fecha: Long
+    val nombre: String,
+    val resultado: String,
+    val cierraCaso: Boolean
 )
 
-data class EncuestaSyncRequest(
-    val encuestas: List<EncuestaDto>
-)
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
@@ -80,15 +75,14 @@ interface ApiService {
     @GET("/contacts")
     suspend fun getContactos(@Query("estado") estado: String? = null): Response<List<ContactoDto>>
 
-    /** Sincronizar encuestas cerradas */
-    @POST("/encuestas")
-    suspend fun syncEncuestas(@Body payload: EncuestaSyncRequest): Response<Map<String, String>>
-
     /** Bloqueo preventivo de contacto antes de llamar ( Pool Model ) */
     @POST("/contacts/{id}/lock")
     suspend fun lockContacto(@retrofit2.http.Path("id") id: String): Response<Map<String, Any>>
 
     /** Obtener proyectos asignados al agente */
-    @GET("/api/proyectos/agente")
+    @GET("/projects/agente")
     suspend fun getProyectosAgente(): Response<List<ProyectoDto>>
+
+    @GET("/tipifications")
+    suspend fun getTipificaciones(): Response<List<TipificacionDto>>
 }

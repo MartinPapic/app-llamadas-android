@@ -9,6 +9,7 @@ import com.cem.appllamadas.data.remote.AuthApiService
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import com.cem.appllamadas.domain.repository.LlamadaRepository
 import com.cem.appllamadas.domain.repository.ProyectoRepository
+import com.cem.appllamadas.domain.repository.TipificacionRepository
 import com.cem.appllamadas.domain.usecase.ObtenerSiguienteContactoUseCase
 import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
 import dagger.Module
@@ -89,13 +90,13 @@ object AppModule {
     }
 
     @Provides
-    fun provideEncuestaDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.EncuestaDao {
-        return appDatabase.encuestaDao
+    fun provideProyectoDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.ProyectoDao {
+        return appDatabase.proyectoDao
     }
 
     @Provides
-    fun provideProyectoDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.ProyectoDao {
-        return appDatabase.proyectoDao
+    fun provideTipificacionDao(appDatabase: AppDatabase): com.cem.appllamadas.data.local.dao.TipificacionDao {
+        return appDatabase.tipificacionDao
     }
 
     @Provides
@@ -119,20 +120,20 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideEncuestaRepository(
-        dao: com.cem.appllamadas.data.local.dao.EncuestaDao,
-        apiService: ApiService
-    ): com.cem.appllamadas.domain.repository.EncuestaRepository {
-        return com.cem.appllamadas.data.repository.EncuestaRepositoryImpl(dao, apiService)
-    }
-
-    @Provides
-    @Singleton
     fun provideProyectoRepository(
         dao: com.cem.appllamadas.data.local.dao.ProyectoDao,
         apiService: ApiService
     ): ProyectoRepository {
         return com.cem.appllamadas.data.repository.ProyectoRepositoryImpl(dao, apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTipificacionRepository(
+        dao: com.cem.appllamadas.data.local.dao.TipificacionDao,
+        apiService: ApiService
+    ): TipificacionRepository {
+        return com.cem.appllamadas.data.repository.TipificacionRepositoryImpl(dao, apiService)
     }
 
     @Provides

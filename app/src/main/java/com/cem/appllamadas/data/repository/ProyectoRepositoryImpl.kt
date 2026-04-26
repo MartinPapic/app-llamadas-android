@@ -20,7 +20,7 @@ class ProyectoRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val dtos = response.body() ?: emptyList()
                 val entities = dtos.map { 
-                    ProyectoEntity(it.id, it.nombre, it.instrumentoUrl, it.fechaCreacion) 
+                    ProyectoEntity(it.id, it.nombre, it.estado, it.fechaCreacion) 
                 }
                 proyectoDao.insertProyectos(entities)
             }

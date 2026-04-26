@@ -8,6 +8,6 @@ data class ProyectoEntity(
     @PrimaryKey
     val id: String,
     val nombre: String,
-    val instrumentoUrl: String,
+    val estado: String,
     val fechaCreacion: Long
 )
