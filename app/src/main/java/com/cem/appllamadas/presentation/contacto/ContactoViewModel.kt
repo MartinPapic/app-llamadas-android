@@ -70,6 +70,28 @@ class ContactoViewModel @Inject constructor(
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _contactoActual = MutableStateFlow<Contacto?>(null)
+    val contactoActual: StateFlow<Contacto?> = _contactoActual.asStateFlow()
+
+    private val _mostrarListado = MutableStateFlow(true)
+    val mostrarListado: StateFlow<Boolean> = _mostrarListado.asStateFlow()
+
+    private val _postCallState = MutableStateFlow<PostCallState?>(null)
+    val postCallState: StateFlow<PostCallState?> = _postCallState.asStateFlow()
+
+    private val _tipificaciones = MutableStateFlow<List<Tipificacion>>(emptyList())
+    val tipificaciones: StateFlow<List<Tipificacion>> = _tipificaciones.asStateFlow()
+
+    private val _historialLlamadas = MutableStateFlow<List<Llamada>>(emptyList())
+    val historialLlamadas: StateFlow<List<Llamada>> = _historialLlamadas.asStateFlow()
+    private var historialJob: kotlinx.coroutines.Job? = null
+
+    private val _errorConcurrencia = MutableStateFlow<String?>(null)
+    val errorConcurrencia: StateFlow<String?> = _errorConcurrencia.asStateFlow()
+
     init {
         observeCallState()
         syncProyectos()
@@ -108,32 +130,6 @@ class ContactoViewModel @Inject constructor(
         _proyectoSeleccionado.value = null
         // todosLosContactos se actualiza automáticamente vía combine()
     }
-
-    // ─── Contacto seleccionado actualmente ───────────────────────────────────
-    private val _contactoActual = MutableStateFlow<Contacto?>(null)
-    val contactoActual: StateFlow<Contacto?> = _contactoActual.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    // ─── Formulario post-llamada ──────────────────────────────────────────────
-    private val _postCallState = MutableStateFlow<PostCallState?>(null)
-    val postCallState: StateFlow<PostCallState?> = _postCallState.asStateFlow()
-
-    // ─── Navegación: mostrar listado o detalle ────────────────────────────────
-    private val _mostrarListado = MutableStateFlow(true)
-    val mostrarListado: StateFlow<Boolean> = _mostrarListado.asStateFlow()
-
-    private val _tipificaciones = MutableStateFlow<List<Tipificacion>>(emptyList())
-    val tipificaciones: StateFlow<List<Tipificacion>> = _tipificaciones.asStateFlow()
-
-    private val _historialLlamadas = MutableStateFlow<List<Llamada>>(emptyList())
-    val historialLlamadas: StateFlow<List<Llamada>> = _historialLlamadas.asStateFlow()
-    private var historialJob: kotlinx.coroutines.Job? = null
-
-
-    private val _errorConcurrencia = MutableStateFlow<String?>(null)
-    val errorConcurrencia: StateFlow<String?> = _errorConcurrencia.asStateFlow()
 
     private fun observeCallState() {
         viewModelScope.launch {
