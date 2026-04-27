@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -56,13 +57,22 @@ class ContactoViewModel @Inject constructor(
     val proyectoSeleccionado: StateFlow<com.cem.appllamadas.data.local.entity.ProyectoEntity?> = _proyectoSeleccionado.asStateFlow()
 
     // ─── Lista filtrada por proyecto ──────────────────────────────────────────
-    private val _todosLosContactos = MutableStateFlow<List<Contacto>>(emptyList())
-    val todosLosContactos: StateFlow<List<Contacto>> = _todosLosContactos.asStateFlow()
+    // Reacciona automáticamente cuando cambia el proyecto O cuando Room actualiza contactos
+    val todosLosContactos: StateFlow<List<Contacto>> =
+        combine(
+            contactoRepository.getAllContactos(),
+            _proyectoSeleccionado
+        ) { lista, proyecto ->
+            if (proyecto != null) {
+                lista.filter { it.proyectoId == proyecto.id }
+            } else {
+                lista
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         observeCallState()
         syncProyectos()
-        observeContactos()
         observeTipificaciones()
     }
 
@@ -75,22 +85,11 @@ class ContactoViewModel @Inject constructor(
         }
     }
 
-    private fun syncProyectos() {
+    fun syncProyectos() {
         viewModelScope.launch {
+            _isLoading.value = true
             proyectoRepository.syncProyectosDesdeServidor()
-        }
-    }
-
-    private fun observeContactos() {
-        viewModelScope.launch {
-            contactoRepository.getAllContactos().collect { lista ->
-                val proyecto = _proyectoSeleccionado.value
-                _todosLosContactos.value = if (proyecto != null) {
-                    lista.filter { it.proyectoId == proyecto.id }
-                } else {
-                    lista
-                }
-            }
+            _isLoading.value = false
         }
     }
 
@@ -107,9 +106,7 @@ class ContactoViewModel @Inject constructor(
 
     fun deseleccionarProyecto() {
         _proyectoSeleccionado.value = null
-        viewModelScope.launch {
-            _todosLosContactos.value = contactoRepository.getAllContactos().stateIn(viewModelScope).value
-        }
+        // todosLosContactos se actualiza automáticamente vía combine()
     }
 
     // ─── Contacto seleccionado actualmente ───────────────────────────────────
@@ -208,6 +205,7 @@ class ContactoViewModel @Inject constructor(
     fun forceRefresh() {
         viewModelScope.launch {
             _isLoading.value = true
+            syncProyectos()
             contactoRepository.syncContactosDesdeServidor()
             _isLoading.value = false
         }

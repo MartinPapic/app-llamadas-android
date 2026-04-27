@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.activity.viewModels
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var sessionManager: SessionManager
+
+    // ViewModel compartido entre todas las rutas — scoped a la Activity
+    private val contactoViewModel: ContactoViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,14 +62,14 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("seleccion_proyecto") {
-                            val viewModel = hiltViewModel<ContactoViewModel>()
+                            // Usamos la instancia compartida de la Activity
                             com.cem.appllamadas.presentation.proyecto.ProjectSelectionScreen(
-                                viewModel = viewModel,
+                                viewModel = contactoViewModel,
                                 onProjectSelected = {
                                     navController.navigate("contacto")
                                 },
                                 onLogout = {
-                                    viewModel.logout()
+                                    contactoViewModel.logout()
                                     navController.navigate("login") {
                                         popUpTo(0) { inclusive = true }
                                     }
@@ -74,9 +78,9 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("contacto") {
-                            val viewModel = hiltViewModel<ContactoViewModel>()
-                            val proyectoSeleccionado by viewModel.proyectoSeleccionado.collectAsState()
-                            
+                            // Misma instancia compartida — proyectoSeleccionado ya está seteado
+                            val proyectoSeleccionado by contactoViewModel.proyectoSeleccionado.collectAsState()
+
                             // Si por algún motivo perdemos el proyecto, volver a selección
                             if (proyectoSeleccionado == null) {
                                 navController.navigate("seleccion_proyecto") {
@@ -85,24 +89,21 @@ class MainActivity : ComponentActivity() {
                             }
 
                             ContactoScreen(
-                                viewModel = viewModel,
+                                viewModel = contactoViewModel,
                                 onLogout = {
-                                    viewModel.logout()
+                                    contactoViewModel.logout()
                                     navController.navigate("login") {
                                         popUpTo(0) { inclusive = true }
                                     }
                                 },
-
                                 onVolverAProyectos = {
-                                    viewModel.deseleccionarProyecto()
+                                    contactoViewModel.deseleccionarProyecto()
                                     navController.navigate("seleccion_proyecto") {
                                         popUpTo("contacto") { inclusive = true }
                                     }
                                 }
                             )
                         }
-
-
                     }
                 }
             }

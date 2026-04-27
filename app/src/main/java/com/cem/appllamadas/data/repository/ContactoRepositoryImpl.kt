@@ -82,7 +82,8 @@ class ContactoRepositoryImpl(
         fechaCreacion = fechaCreacion,
         ultimaTipificacion = ultimaTipificacion,
         ultimaObservacion = ultimaObservacion,
-        fechaUltimaGestion = fechaUltimaGestion
+        fechaUltimaGestion = fechaUltimaGestion,
+        proyectoId = proyectoId  // ← campo faltante que causaba el filtro vacío
     )
 
     private fun Contacto.toEntity() = ContactoEntity(
