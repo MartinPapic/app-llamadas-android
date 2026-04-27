@@ -73,7 +73,10 @@ interface ApiService {
 
     /** Obtener contactos del servidor (opcional: sincronizar hacia abajo) */
     @GET("/contacts")
-    suspend fun getContactos(@Query("estado") estado: String? = null): Response<List<ContactoDto>>
+    suspend fun getContactos(
+        @Query("estado") estado: String? = null,
+        @Query("proyectoId") proyectoId: String? = null
+    ): Response<List<ContactoDto>>
 
     /** Bloqueo preventivo de contacto antes de llamar ( Pool Model ) */
     @POST("/contacts/{id}/lock")

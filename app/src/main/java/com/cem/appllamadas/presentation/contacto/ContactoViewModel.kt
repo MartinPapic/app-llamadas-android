@@ -96,10 +96,12 @@ class ContactoViewModel @Inject constructor(
 
     fun seleccionarProyecto(proyecto: com.cem.appllamadas.data.local.entity.ProyectoEntity) {
         _proyectoSeleccionado.value = proyecto
-        // Forzar refiltrado
+        _isLoading.value = true
         viewModelScope.launch {
-            val lista = contactoRepository.getAllContactos().stateIn(viewModelScope).value
-            _todosLosContactos.value = lista.filter { it.proyectoId == proyecto.id }
+            // Sincronizar contactos de este proyecto desde el servidor
+            contactoRepository.syncContactosDesdeServidor(proyectoId = proyecto.id)
+            _isLoading.value = false
+            // El Flow de observeContactos() actualizará automáticamente la lista
         }
     }
 

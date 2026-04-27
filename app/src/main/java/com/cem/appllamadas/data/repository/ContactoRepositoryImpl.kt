@@ -30,10 +30,9 @@ class ContactoRepositoryImpl(
     override fun getAllContactos(): Flow<List<Contacto>> =
         contactoDao.getAllContactos().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun syncContactosDesdeServidor() {
+    override suspend fun syncContactosDesdeServidor(proyectoId: String?) {
         try {
-            // Obtenemos solo los pendientes o en_gestion (los activos)
-            val response = apiService.getContactos("pendiente") 
+            val response = apiService.getContactos(proyectoId = proyectoId)
             if (response.isSuccessful) {
                 val remotos = response.body() ?: emptyList()
                 val entidades = remotos.map { dto ->
@@ -43,7 +42,8 @@ class ContactoRepositoryImpl(
                         telefono = dto.telefono,
                         estado = EstadoContacto.valueOf(dto.estado.uppercase()),
                         intentos = dto.intentos,
-                        fechaCreacion = dto.fechaCreacion
+                        fechaCreacion = dto.fechaCreacion,
+                        proyectoId = proyectoId  // Preservar el contexto del proyecto
                     )
                 }
                 if (entidades.isNotEmpty()) {
