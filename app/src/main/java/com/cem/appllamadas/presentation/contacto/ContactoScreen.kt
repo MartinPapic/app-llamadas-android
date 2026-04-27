@@ -83,6 +83,13 @@ fun ContactoScreen(
 
     val tipificaciones by viewModel.tipificaciones.collectAsState()
 
+    // Sincronizar si entramos a post-llamada y no hay datos
+    LaunchedEffect(postCall) {
+        if (postCall != null && tipificaciones.isEmpty()) {
+            viewModel.syncTipificaciones()
+        }
+    }
+
     // Manejo de Error de Concurrencia (Pool Model)
     if (errorConcurrencia != null) {
         AlertDialog(
@@ -374,9 +381,9 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                         HorizontalDivider(modifier = Modifier.alpha(0.1f))
                         Spacer(Modifier.height(8.dp))
                         Text("Última gestión:", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                        Text(contacto.ultimaTipificacion!!, fontSize = 14.sp)
+                        Text(contacto.ultimaTipificacion, fontSize = 14.sp)
                         if (!contacto.ultimaObservacion.isNullOrBlank()) {
-                            Text(contacto.ultimaObservacion!!, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(contacto.ultimaObservacion, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -556,7 +563,13 @@ fun PostCallForm(
             AnimatedVisibility(visible = resultadoSeleccionado != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("2. Tipificación *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    val opciones = tipificaciones.filter { it.resultado == resultadoSeleccionado?.name }.map { it.nombre }
+                    val opciones = tipificaciones.filter { 
+                        it.resultado.equals(resultadoSeleccionado?.name, ignoreCase = true) 
+                    }.map { it.nombre }
+                    
+                    if (opciones.isEmpty() && tipificaciones.isNotEmpty()) {
+                        Text("No hay tipificaciones para este resultado", color = Color.Red, fontSize = 12.sp)
+                    }
                     ExposedDropdownMenuBox(expanded = expandedTip, onExpandedChange = { expandedTip = it }) {
                         OutlinedTextField(
                             value = tipificacion ?: "Seleccionar...",

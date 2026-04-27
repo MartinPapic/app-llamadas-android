@@ -95,10 +95,10 @@ class ContactoViewModel @Inject constructor(
     init {
         observeCallState()
         syncProyectos()
-        observeTipificaciones()
+        syncTipificaciones()
     }
 
-    private fun observeTipificaciones() {
+    fun syncTipificaciones() {
         viewModelScope.launch {
             tipificacionRepository.syncTipificaciones()
             tipificacionRepository.getAll().collect { tips ->
@@ -197,6 +197,7 @@ class ContactoViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             syncProyectos()
+            syncTipificaciones()
             contactoRepository.syncContactosDesdeServidor()
             _isLoading.value = false
         }
