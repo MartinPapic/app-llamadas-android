@@ -95,6 +95,7 @@ class ContactoRepositoryImpl(
         fechaCreacion = fechaCreacion,
         ultimaTipificacion = ultimaTipificacion,
         ultimaObservacion = ultimaObservacion,
-        fechaUltimaGestion = fechaUltimaGestion
+        fechaUltimaGestion = fechaUltimaGestion,
+        proyectoId = proyectoId
     )
 }

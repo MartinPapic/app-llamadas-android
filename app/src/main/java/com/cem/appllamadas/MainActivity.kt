@@ -18,9 +18,9 @@ import androidx.compose.runtime.getValue
 import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.presentation.contacto.ContactoScreen
 import com.cem.appllamadas.presentation.contacto.ContactoViewModel
-
 import com.cem.appllamadas.presentation.login.LoginScreen
 import com.cem.appllamadas.presentation.login.LoginViewModel
+import com.cem.appllamadas.presentation.proyecto.ProjectSelectionScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -62,8 +62,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("seleccion_proyecto") {
-                            // Usamos la instancia compartida de la Activity
-                            com.cem.appllamadas.presentation.proyecto.ProjectSelectionScreen(
+                            ProjectSelectionScreen(
                                 viewModel = contactoViewModel,
                                 onProjectSelected = {
                                     navController.navigate("contacto")
@@ -71,17 +70,15 @@ class MainActivity : ComponentActivity() {
                                 onLogout = {
                                     contactoViewModel.logout()
                                     navController.navigate("login") {
-                                        popUpTo(0) { inclusive = true }
+                                        popUpTo(navController.graph.id) { inclusive = true }
                                     }
                                 }
                             )
                         }
 
                         composable("contacto") {
-                            // Misma instancia compartida — proyectoSeleccionado ya está seteado
                             val proyectoSeleccionado by contactoViewModel.proyectoSeleccionado.collectAsState()
 
-                            // Si por algún motivo perdemos el proyecto, volver a selección
                             if (proyectoSeleccionado == null) {
                                 navController.navigate("seleccion_proyecto") {
                                     popUpTo("contacto") { inclusive = true }
@@ -93,7 +90,7 @@ class MainActivity : ComponentActivity() {
                                 onLogout = {
                                     contactoViewModel.logout()
                                     navController.navigate("login") {
-                                        popUpTo(0) { inclusive = true }
+                                        popUpTo(navController.graph.id) { inclusive = true }
                                     }
                                 },
                                 onVolverAProyectos = {

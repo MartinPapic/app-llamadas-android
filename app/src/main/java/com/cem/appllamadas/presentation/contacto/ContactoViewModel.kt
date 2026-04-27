@@ -132,13 +132,8 @@ class ContactoViewModel @Inject constructor(
     private var historialJob: kotlinx.coroutines.Job? = null
 
 
-    // ─── Estado de error de concurrencia (Pool Model) ─────────────────────────
     private val _errorConcurrencia = MutableStateFlow<String?>(null)
     val errorConcurrencia: StateFlow<String?> = _errorConcurrencia.asStateFlow()
-
-    init {
-        observeCallState()
-    }
 
     private fun observeCallState() {
         viewModelScope.launch {

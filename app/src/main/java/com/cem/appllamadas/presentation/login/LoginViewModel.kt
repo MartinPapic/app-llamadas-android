@@ -47,14 +47,19 @@ class LoginViewModel @Inject constructor(
             try {
                 val response = authApiService.login(LoginRequest(email.trim(), password))
                 if (response.isSuccessful) {
-                    val body = response.body()!!
-                    sessionManager.saveSession(
-                        accessToken  = body.accessToken,
-                        refreshToken = body.refreshToken,
-                        userId       = body.userId,
-                        nombre       = body.nombre,
-                        rol          = body.rol
-                    )
+                    val body = response.body()
+                    if (body != null) {
+                        sessionManager.saveSession(
+                            accessToken  = body.accessToken,
+                            refreshToken = body.refreshToken,
+                            userId       = body.userId,
+                            nombre       = body.nombre,
+                            rol          = body.rol
+                        )
+                    } else {
+                        _uiState.value = LoginUiState.Error("Error: Respuesta del servidor vacía")
+                        return@launch
+                    }
 
                     withContext(Dispatchers.IO) {
                         // PASO 1: Subir llamadas y encuestas pendientes ANTES de limpiar la BD.
