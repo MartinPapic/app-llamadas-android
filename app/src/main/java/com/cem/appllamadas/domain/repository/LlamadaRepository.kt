@@ -8,4 +8,5 @@ interface LlamadaRepository {
     suspend fun getLlamadasPendientesSync(): List<Llamada>
     suspend fun marcarComoSincronizada(id: String)
     fun getHistorialByContacto(contactoId: String): Flow<List<Llamada>>
+    suspend fun syncLlamadasPendientes()
 }

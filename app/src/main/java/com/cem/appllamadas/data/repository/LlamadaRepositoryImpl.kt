@@ -30,6 +30,10 @@ class LlamadaRepositoryImpl(
         llamadaDao.marcarSincronizada(id)
     }
 
+    override suspend fun getLlamadasPendientesSync(): List<Llamada> {
+        return llamadaDao.getLlamadasPendientesSync().map { it.toDomain() }
+    }
+
     override fun getHistorialByContacto(contactoId: String): Flow<List<Llamada>> {
         return llamadaDao.getLlamadasByContactoId(contactoId).map { entities ->
             entities.map { entity ->

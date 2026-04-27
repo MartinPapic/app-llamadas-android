@@ -27,7 +27,8 @@ class RegistrarLlamadaUseCase(
             intentos = nuevosIntentos,
             estado = nuevoEstado,
             ultimaTipificacion = llamada.tipificacion,
-            ultimaObservacion = llamada.observacion
+            ultimaObservacion = llamada.observacion,
+            fechaUltimaGestion = llamada.fechaFin ?: System.currentTimeMillis()
         )
         contactoRepository.actualizarContacto(contactoActualizado)
     }

@@ -8,7 +8,7 @@ import com.cem.appllamadas.data.remote.AuthApiService
 import com.cem.appllamadas.data.remote.LoginRequest
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import com.cem.appllamadas.domain.repository.LlamadaRepository
-import com.cem.appllamadas.domain.repository.EncuestaRepository
+
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +30,6 @@ class LoginViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val contactoRepository: ContactoRepository,
     private val llamadaRepository: LlamadaRepository,
-    private val encuestaRepository: EncuestaRepository,
     private val appDatabase: AppDatabase
 ) : ViewModel() {
 
@@ -66,11 +65,7 @@ class LoginViewModel @Inject constructor(
                         } catch (e: Exception) {
                             e.printStackTrace() // Registro el error pero no bloqueo el login
                         }
-                        try {
-                            encuestaRepository.syncEncuestasPendientes()
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+
 
                         // PASO 2: Solo limpiar DESPUÉS de haber subido los datos pendientes.
                         try {

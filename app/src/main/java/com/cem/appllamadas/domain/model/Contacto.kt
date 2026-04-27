@@ -13,5 +13,6 @@ data class Contacto(
     val fechaCreacion: Long,
     val ultimaTipificacion: String? = null,
     val ultimaObservacion: String? = null,
+    val fechaUltimaGestion: Long? = null,
     val proyectoId: String? = null
 )

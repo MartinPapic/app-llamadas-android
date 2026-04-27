@@ -73,15 +73,9 @@ class ContactoRepositoryImpl(
         }
     }
 
-    private fun ContactoEntity.toDomain() = Contacto(
-        id = id,
-        nombre = nombre,
-        telefono = telefono,
-        estado = estado,
-        intentos = intentos,
-        fechaCreacion = fechaCreacion,
         ultimaTipificacion = ultimaTipificacion,
-        ultimaObservacion = ultimaObservacion
+        ultimaObservacion = ultimaObservacion,
+        fechaUltimaGestion = fechaUltimaGestion
     )
 
     private fun Contacto.toEntity() = ContactoEntity(
@@ -92,6 +86,7 @@ class ContactoRepositoryImpl(
         intentos = intentos,
         fechaCreacion = fechaCreacion,
         ultimaTipificacion = ultimaTipificacion,
-        ultimaObservacion = ultimaObservacion
+        ultimaObservacion = ultimaObservacion,
+        fechaUltimaGestion = fechaUltimaGestion
     )
 }

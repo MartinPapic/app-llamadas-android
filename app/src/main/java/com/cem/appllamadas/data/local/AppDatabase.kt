@@ -14,7 +14,7 @@ import com.cem.appllamadas.data.local.entity.TipificacionEntity
 
 @Database(
     entities = [ContactoEntity::class, LlamadaEntity::class, ProyectoEntity::class, TipificacionEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

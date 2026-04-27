@@ -14,7 +14,6 @@ import com.cem.appllamadas.domain.repository.TipificacionRepository
 import com.cem.appllamadas.domain.model.Tipificacion
 import com.cem.appllamadas.domain.usecase.ObtenerSiguienteContactoUseCase
 import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
-import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
 import com.cem.appllamadas.worker.SyncWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

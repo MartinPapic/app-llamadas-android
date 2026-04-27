@@ -17,8 +17,7 @@ import androidx.compose.runtime.getValue
 import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.presentation.contacto.ContactoScreen
 import com.cem.appllamadas.presentation.contacto.ContactoViewModel
-import com.cem.appllamadas.presentation.encuesta.EncuestaScreen
-import com.cem.appllamadas.presentation.encuesta.EncuestaViewModel
+
 import com.cem.appllamadas.presentation.login.LoginScreen
 import com.cem.appllamadas.presentation.login.LoginViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -93,10 +92,7 @@ class MainActivity : ComponentActivity() {
                                         popUpTo(0) { inclusive = true }
                                     }
                                 },
-                                onAbrirEncuesta = { url ->
-                                    // Ahora pasamos la URL directamente desde el ViewModel
-                                    navController.navigate("encuesta?url=${java.net.URLEncoder.encode(url, "UTF-8")}")
-                                },
+
                                 onVolverAProyectos = {
                                     viewModel.deseleccionarProyecto()
                                     navController.navigate("seleccion_proyecto") {
@@ -106,19 +102,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        composable("encuesta?url={url}") { backStackEntry ->
-                            val url = backStackEntry.arguments?.getString("url") ?: ""
-                            val viewModel = hiltViewModel<EncuestaViewModel>()
 
-                            EncuestaScreen(
-                                contactoId = "temp", // El ID ya está en la URL si QuestionPro lo requiere
-                                url = url,
-                                viewModel = viewModel,
-                                onFinished = {
-                                    navController.popBackStack()
-                                }
-                            )
-                        }
                     }
                 }
             }
