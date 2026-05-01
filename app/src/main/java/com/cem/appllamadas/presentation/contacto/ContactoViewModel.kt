@@ -221,6 +221,11 @@ class ContactoViewModel @Inject constructor(
         val contacto = _contactoActual.value ?: return
         val userId   = sessionManager.getUserId() ?: "desconocido"
 
+        val hoyStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val intentoHoy = _historialLlamadas.value.any { 
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
+        }
+
         viewModelScope.launch {
             val llamada = Llamada(
                 id           = UUID.randomUUID().toString(),
@@ -233,7 +238,9 @@ class ContactoViewModel @Inject constructor(
                 tipificacion = tipificacion,
                 motivo       = motivo,
                 observacion  = observacion.ifBlank { null },
-                proyectoId   = _proyectoSeleccionado.value?.id
+                proyectoId   = _proyectoSeleccionado.value?.id,
+                listaId      = contacto.listaId,
+                intentoValido = !intentoHoy
             )
             
             val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
@@ -260,6 +267,11 @@ class ContactoViewModel @Inject constructor(
         val userId   = sessionManager.getUserId() ?: "desconocido"
         val ahora    = System.currentTimeMillis()
 
+        val hoyStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(ahora))
+        val intentoHoy = _historialLlamadas.value.any { 
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
+        }
+
         viewModelScope.launch {
             val llamada = Llamada(
                 id           = UUID.randomUUID().toString(),
@@ -272,7 +284,9 @@ class ContactoViewModel @Inject constructor(
                 tipificacion = tipificacion,
                 motivo       = motivo,
                 observacion  = observacion.ifBlank { null },
-                proyectoId   = _proyectoSeleccionado.value?.id
+                proyectoId   = _proyectoSeleccionado.value?.id,
+                listaId      = contacto.listaId,
+                intentoValido = !intentoHoy
             )
             val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
             val cierraCaso = tipObj?.cierraCaso ?: false

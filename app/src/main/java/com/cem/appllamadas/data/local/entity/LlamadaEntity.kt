@@ -17,5 +17,7 @@ data class LlamadaEntity(
     val motivo: String?,
     val observacion: String?,
     val proyectoId: String?,
+    val listaId: String?,
+    val intentoValido: Boolean,
     val pendienteSync: Boolean = true
 )

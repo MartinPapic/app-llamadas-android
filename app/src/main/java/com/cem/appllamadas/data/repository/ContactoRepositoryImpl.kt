@@ -42,8 +42,11 @@ class ContactoRepositoryImpl(
                         telefono = dto.telefono,
                         estado = EstadoContacto.valueOf(dto.estado.uppercase()),
                         intentos = dto.intentos,
+                        intentosValidos = dto.intentosValidos,
                         fechaCreacion = dto.fechaCreacion,
-                        proyectoId = proyectoId  // Preservar el contexto del proyecto
+                        proyectoId = dto.proyectoId ?: proyectoId,
+                        listaId = dto.listaId,
+                        referenciaId = dto.referenciaId
                     )
                 }
                 if (entidades.isNotEmpty()) {
@@ -83,7 +86,10 @@ class ContactoRepositoryImpl(
         ultimaTipificacion = ultimaTipificacion,
         ultimaObservacion = ultimaObservacion,
         fechaUltimaGestion = fechaUltimaGestion,
-        proyectoId = proyectoId  // ← campo faltante que causaba el filtro vacío
+        proyectoId = proyectoId,
+        listaId = listaId,
+        referenciaId = referenciaId,
+        intentosValidos = intentosValidos
     )
 
     private fun Contacto.toEntity() = ContactoEntity(
@@ -96,6 +102,9 @@ class ContactoRepositoryImpl(
         ultimaTipificacion = ultimaTipificacion,
         ultimaObservacion = ultimaObservacion,
         fechaUltimaGestion = fechaUltimaGestion,
-        proyectoId = proyectoId
+        proyectoId = proyectoId,
+        listaId = listaId,
+        referenciaId = referenciaId,
+        intentosValidos = intentosValidos
     )
 }

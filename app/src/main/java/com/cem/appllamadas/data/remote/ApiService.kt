@@ -32,7 +32,9 @@ data class LlamadaDto(
     val tipificacion: String?,
     val motivo: String?,
     val observacion: String?,
-    val proyectoId: String?
+    val proyectoId: String?,
+    val listaId: String?,
+    val intentoValido: Boolean
 )
 
 data class ProyectoDto(
@@ -48,7 +50,11 @@ data class ContactoDto(
     val telefono: String,
     val estado: String,          // "pendiente", "en_gestion", "contactado", "desistido"
     val intentos: Int,
-    val fechaCreacion: Long
+    val intentosValidos: Int,
+    val fechaCreacion: Long,
+    val listaId: String?,
+    val referenciaId: String?,
+    val proyectoId: String?
 )
 
 data class TipificacionDto(

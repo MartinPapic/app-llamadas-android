@@ -49,6 +49,8 @@ class LlamadaRepositoryImpl(
                     tipificacion = entity.tipificacion,
                     motivo = entity.motivo,
                     observacion = entity.observacion,
+                    listaId = entity.listaId,
+                    intentoValido = entity.intentoValido,
                     pendienteSync = entity.pendienteSync
                 )
             }
@@ -74,7 +76,11 @@ class LlamadaRepositoryImpl(
                     telefono     = entity.telefono,
                     estado       = entity.estado.name.lowercase(),
                     intentos     = entity.intentos,
-                    fechaCreacion = entity.fechaCreacion
+                    intentosValidos = entity.intentosValidos,
+                    fechaCreacion = entity.fechaCreacion,
+                    proyectoId    = entity.proyectoId,
+                    listaId       = entity.listaId,
+                    referenciaId  = entity.referenciaId
                 )
             }
 
@@ -108,7 +114,9 @@ class LlamadaRepositoryImpl(
         tipificacion = tipificacion,
         motivo       = motivo,
         observacion  = observacion,
-        proyectoId   = proyectoId
+        proyectoId   = proyectoId,
+        listaId      = listaId,
+        intentoValido = intentoValido
     )
 
     private fun LlamadaEntity.toDomain() = Llamada(
@@ -123,6 +131,8 @@ class LlamadaRepositoryImpl(
         motivo       = motivo,
         observacion  = observacion,
         proyectoId   = proyectoId,
+        listaId      = listaId,
+        intentoValido = intentoValido,
         pendienteSync = pendienteSync
     )
 
@@ -138,6 +148,8 @@ class LlamadaRepositoryImpl(
         motivo       = motivo,
         observacion  = observacion,
         proyectoId   = proyectoId,
+        listaId      = listaId,
+        intentoValido = intentoValido,
         pendienteSync = pendienteSync
     )
 }

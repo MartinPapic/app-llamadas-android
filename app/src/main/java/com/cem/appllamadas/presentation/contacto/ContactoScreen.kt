@@ -54,6 +54,8 @@ private fun estadoColor(estado: EstadoContacto) = when (estado) {
     EstadoContacto.EN_GESTION  -> Color(0xFFF59E0B)
     EstadoContacto.CONTACTADO  -> Color(0xFF10B981)
     EstadoContacto.DESISTIDO   -> Color(0xFFEF4444)
+    EstadoContacto.CERRADO     -> Color(0xFF64748B)
+    EstadoContacto.CERRADO_POR_INTENTOS -> Color(0xFFEF4444)
 }
 
 private fun estadoLabel(estado: EstadoContacto) = when (estado) {
@@ -61,6 +63,8 @@ private fun estadoLabel(estado: EstadoContacto) = when (estado) {
     EstadoContacto.EN_GESTION  -> "En gestión"
     EstadoContacto.CONTACTADO  -> "Contactado"
     EstadoContacto.DESISTIDO   -> "Desistido"
+    EstadoContacto.CERRADO     -> "Cerrado"
+    EstadoContacto.CERRADO_POR_INTENTOS -> "Max. Intentos"
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -255,6 +259,9 @@ fun ContactoListItem(contacto: Contacto, onClick: () -> Unit) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(contacto.nombre, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (!contacto.referenciaId.isNullOrBlank()) {
+                        Text("ID: ${contacto.referenciaId}", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                    }
                     Text(contacto.telefono, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.End) {
@@ -263,7 +270,7 @@ fun ContactoListItem(contacto: Contacto, onClick: () -> Unit) {
                             fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text("${contacto.intentos}/5", fontSize = 11.sp,
+                    Text("${contacto.intentosValidos}/5", fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -320,7 +327,16 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
         }
     }
 
-    val bloqueado = contacto.intentos >= 5 || contacto.estado == EstadoContacto.DESISTIDO
+    val bloqueado = contacto.intentosValidos >= 5 || 
+                    contacto.estado == EstadoContacto.DESISTIDO || 
+                    contacto.estado == EstadoContacto.CERRADO || 
+                    contacto.estado == EstadoContacto.CERRADO_POR_INTENTOS
+
+    // Calcular si ya se llamó hoy (1 intento por día)
+    val hoyStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+    val intentoHoy = historial.any { 
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
+    }
 
     Scaffold(
         topBar = {
@@ -359,6 +375,9 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                         Spacer(Modifier.width(8.dp))
                         Text(contacto.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
+                    if (!contacto.referenciaId.isNullOrBlank()) {
+                        Text("ID Referencia: ${contacto.referenciaId}", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                    }
                     Text("📞 ${contacto.telefono}", fontSize = 15.sp)
                     
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -369,7 +388,7 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                         }
                         Surface(shape = RoundedCornerShape(8.dp),
                             color = (if (bloqueado) Color(0xFFEF4444) else Color(0xFF10B981)).copy(alpha = 0.15f)) {
-                            Text("${contacto.intentos}/5 intentos",
+                            Text("${contacto.intentosValidos}/5 intentos válidos",
                                 color = if (bloqueado) Color(0xFFEF4444) else Color(0xFF10B981),
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
@@ -396,8 +415,19 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("🚫 Este contacto ha alcanzado el límite de 5 intentos. No se pueden realizar más llamadas.",
+                    Text("🚫 Contacto cerrado o alcanzó el límite de 5 intentos válidos.",
                         color = Color(0xFFEF4444), modifier = Modifier.padding(16.dp), fontSize = 14.sp)
+                }
+            }
+
+            AnimatedVisibility(visible = !bloqueado && intentoHoy) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF59E0B).copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("⚠ Ya se ha realizado un intento a este contacto el día de hoy. Las reglas dictan máximo 1 intento por día.",
+                        color = Color(0xFFD97706), modifier = Modifier.padding(16.dp), fontSize = 14.sp)
                 }
             }
 
