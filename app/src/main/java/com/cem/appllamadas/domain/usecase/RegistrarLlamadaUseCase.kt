@@ -11,6 +11,11 @@ class RegistrarLlamadaUseCase(
     private val contactoRepository: ContactoRepository
 ) {
     suspend operator fun invoke(llamada: Llamada, contacto: Contacto, cierraCaso: Boolean = false) {
+        // No registrar ni contar intento si no hay tipificación
+        if (llamada.tipificacion.isNullOrBlank()) {
+            return
+        }
+
         // Guardar llamada en base de datos local
         llamadaRepository.registrarLlamada(llamada)
 
