@@ -327,6 +327,25 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
         }
     }
 
+    var showUnlockConfirm by remember { mutableStateOf(false) }
+
+    if (showUnlockConfirm) {
+        AlertDialog(
+            onDismissRequest = { showUnlockConfirm = false },
+            title = { Text("Desbloquear Contacto") },
+            text = { Text("¿Estás seguro de que deseas resetear los intentos de este contacto? Se habilitará nuevamente para llamadas.") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showUnlockConfirm = false
+                    viewModel.desbloquearContacto(contacto.id)
+                }) { Text("Confirmar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnlockConfirm = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     val bloqueado = contacto.intentosValidos >= 5 || 
                     contacto.estado == EstadoContacto.DESISTIDO || 
                     contacto.estado == EstadoContacto.CERRADO || 
@@ -415,8 +434,21 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("🚫 Contacto cerrado o alcanzó el límite de 5 intentos válidos.",
-                        color = Color(0xFFEF4444), modifier = Modifier.padding(16.dp), fontSize = 14.sp)
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🚫 Contacto cerrado o alcanzó el límite de 5 intentos válidos.",
+                            color = Color(0xFFEF4444), fontSize = 14.sp)
+                        
+                        Button(
+                            onClick = { showUnlockConfirm = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null) // use a general icon or suitable
+                            Spacer(Modifier.width(8.dp))
+                            Text("Desbloquear y Reiniciar")
+                        }
+                    }
                 }
             }
 

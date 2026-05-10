@@ -76,6 +76,28 @@ class ContactoRepositoryImpl(
         }
     }
 
+    override suspend fun unlockContacto(id: String): Result<Unit> {
+        return try {
+            val response = apiService.unlockContacto(id)
+            if (response.isSuccessful) {
+                // Opcional: actualizar localmente antes del sync
+                val entity = contactoDao.getContactoById(id)
+                if (entity != null) {
+                    contactoDao.updateContacto(entity.copy(
+                        estado = EstadoContacto.PENDIENTE,
+                        intentosValidos = 0,
+                        intentos = 0
+                    ))
+                }
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("No se pudo desbloquear el contacto (HTTP ${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun ContactoEntity.toDomain() = Contacto(
         id = id,
         nombre = nombre,

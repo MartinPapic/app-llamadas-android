@@ -10,4 +10,5 @@ interface ContactoRepository {
     fun getAllContactos(): Flow<List<Contacto>>
     suspend fun syncContactosDesdeServidor(proyectoId: String? = null)
     suspend fun lockContacto(id: String): Result<Unit>
+    suspend fun unlockContacto(id: String): Result<Unit>
 }

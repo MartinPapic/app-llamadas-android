@@ -203,6 +203,22 @@ class ContactoViewModel @Inject constructor(
         }
     }
 
+    fun desbloquearContacto(contactoId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = contactoRepository.unlockContacto(contactoId)
+            _isLoading.value = false
+            result.onSuccess {
+                val updated = contactoRepository.obtenerContacto(contactoId)
+                if (updated != null) {
+                    _contactoActual.value = updated
+                }
+            }.onFailure {
+                _errorConcurrencia.value = it.message ?: "Error al intentar desbloquear."
+            }
+        }
+    }
+
     fun iniciarLlamada() {
         callStateManager.startTracking()
     }
@@ -225,6 +241,8 @@ class ContactoViewModel @Inject constructor(
         val intentoHoy = _historialLlamadas.value.any { 
             java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
         }
+        // Si se reseteó recientemente (0 intentos válidos), forzamos que el siguiente sea válido
+        val intentoValido = (contacto.intentosValidos == 0) || !intentoHoy
 
         viewModelScope.launch {
             val llamada = Llamada(
@@ -240,7 +258,7 @@ class ContactoViewModel @Inject constructor(
                 observacion  = observacion.ifBlank { null },
                 proyectoId   = _proyectoSeleccionado.value?.id,
                 listaId      = contacto.listaId,
-                intentoValido = !intentoHoy
+                intentoValido = intentoValido
             )
             
             val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
@@ -271,6 +289,7 @@ class ContactoViewModel @Inject constructor(
         val intentoHoy = _historialLlamadas.value.any { 
             java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
         }
+        val intentoValido = (contacto.intentosValidos == 0) || !intentoHoy
 
         viewModelScope.launch {
             val llamada = Llamada(
@@ -286,7 +305,7 @@ class ContactoViewModel @Inject constructor(
                 observacion  = observacion.ifBlank { null },
                 proyectoId   = _proyectoSeleccionado.value?.id,
                 listaId      = contacto.listaId,
-                intentoValido = !intentoHoy
+                intentoValido = intentoValido
             )
             val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
             val cierraCaso = tipObj?.cierraCaso ?: false

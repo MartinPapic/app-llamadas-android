@@ -88,6 +88,10 @@ interface ApiService {
     @POST("/contacts/{id}/lock")
     suspend fun lockContacto(@retrofit2.http.Path("id") id: String): Response<Map<String, Any>>
 
+    /** Desbloqueo manual del contacto */
+    @POST("/contacts/{id}/unlock")
+    suspend fun unlockContacto(@retrofit2.http.Path("id") id: String): Response<Map<String, Any>>
+
     /** Obtener proyectos asignados al agente */
     @GET("/projects/agente")
     suspend fun getProyectosAgente(): Response<List<ProyectoDto>>
