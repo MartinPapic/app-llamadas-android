@@ -14,7 +14,11 @@ interface ContactoDao {
         SELECT * FROM contacto 
         WHERE estado NOT IN ('DESISTIDO', 'CONTACTADO') 
         ORDER BY 
-            CASE WHEN estado = 'PENDIENTE' THEN 0 ELSE 1 END ASC,
+            CASE 
+                WHEN ultimaTipificacion = 'Llamar más tarde' THEN 0
+                WHEN estado = 'PENDIENTE' THEN 1 
+                ELSE 2 
+            END ASC,
             intentos ASC,
             IFNULL(fechaUltimaGestion, 0) ASC
         LIMIT 1
@@ -33,14 +37,18 @@ interface ContactoDao {
     @Update
     suspend fun updateContacto(contacto: ContactoEntity)
 
+    @Query("DELETE FROM contacto WHERE proyectoId = :proyectoId")
+    suspend fun deleteContactosByProyecto(proyectoId: String)
+
     @Query("""
         SELECT * FROM contacto 
         ORDER BY 
             CASE 
-                WHEN estado = 'PENDIENTE' THEN 0 
-                WHEN estado = 'EN_GESTION' THEN 1 
-                WHEN estado = 'CONTACTADO' THEN 2 
-                ELSE 3 
+                WHEN ultimaTipificacion = 'Llamar más tarde' THEN 0
+                WHEN estado = 'PENDIENTE' THEN 1 
+                WHEN estado = 'EN_GESTION' THEN 2 
+                WHEN estado = 'CONTACTADO' THEN 3 
+                ELSE 4 
             END ASC,
             intentos ASC,
             IFNULL(fechaUltimaGestion, 0) ASC

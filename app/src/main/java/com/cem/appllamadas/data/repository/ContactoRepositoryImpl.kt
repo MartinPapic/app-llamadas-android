@@ -49,6 +49,9 @@ class ContactoRepositoryImpl(
                         referenciaId = dto.referenciaId
                     )
                 }
+                if (proyectoId != null) {
+                    contactoDao.deleteContactosByProyecto(proyectoId)
+                }
                 if (entidades.isNotEmpty()) {
                     contactoDao.insertContactos(entidades)
                 }

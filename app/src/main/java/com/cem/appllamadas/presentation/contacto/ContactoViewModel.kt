@@ -274,6 +274,30 @@ class ContactoViewModel @Inject constructor(
         }
     }
 
+    fun iniciarRegistroManual() {
+        val contacto = _contactoActual.value ?: return
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = contactoRepository.lockContacto(contacto.id)
+            _isLoading.value = false
+            result.onSuccess {
+                val ahora = System.currentTimeMillis()
+                _postCallState.value = PostCallState(
+                    resultado = null,
+                    duracion = 0,
+                    fechaInicio = ahora,
+                    fechaFin = ahora
+                )
+            }.onFailure { e ->
+                if (e.message == "CONCURRENCE_ERROR") {
+                    _errorConcurrencia.value = "Este contacto ya está siendo gestionado por otro agente. Por favor, selecciona otro."
+                } else {
+                    _errorConcurrencia.value = "Error de conexión: No se pudo verificar la exclusividad del contacto. Verifica tu internet."
+                }
+            }
+        }
+    }
+
     /** Registra una llamada manual sin haber usado el marcador */
     fun registrarLlamadaManual(
         resultadoSeleccionado: ResultadoLlamada,

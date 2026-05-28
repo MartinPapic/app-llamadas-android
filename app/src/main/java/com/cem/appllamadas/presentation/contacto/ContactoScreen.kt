@@ -20,6 +20,9 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,7 +49,8 @@ private val MOTIVOS_DISPONIBLES = listOf(
 )
 
 // ─── Anti-fraude: duración mínima para permitir ciertos estados ──────────────
-private const val MIN_CALL_DURATION_SEC = 20
+private const val MIN_CALL_DURATION_SEC = 0
+
 
 // ─── Colores por estado ───────────────────────────────────────────────────────
 private fun estadoColor(estado: EstadoContacto) = when (estado) {
@@ -167,10 +171,23 @@ fun ContactoListadoScreen(
 ) {
     val proyectoActual by viewModel.proyectoSeleccionado.collectAsState()
     val contactos by viewModel.todosLosContactos.collectAsState()
-    val pendientes = contactos.filter {
+    
+    var searchQuery by remember { mutableStateOf("") }
+    
+    val filteredContactos = if (searchQuery.isBlank()) {
+        contactos
+    } else {
+        contactos.filter {
+            it.nombre.contains(searchQuery, ignoreCase = true) ||
+            it.telefono.contains(searchQuery) ||
+            (it.referenciaId?.contains(searchQuery, ignoreCase = true) ?: false)
+        }
+    }
+
+    val pendientes = filteredContactos.filter {
         it.estado != EstadoContacto.DESISTIDO && it.estado != EstadoContacto.CONTACTADO
     }
-    val gestionados = contactos.filter {
+    val gestionados = filteredContactos.filter {
         it.estado == EstadoContacto.CONTACTADO || it.estado == EstadoContacto.DESISTIDO
     }
 
@@ -185,6 +202,9 @@ fun ContactoListadoScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.forceRefresh() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Sincronizar", tint = Color.White)
+                    }
                     IconButton(onClick = onCambiarProyecto) {
                         Icon(Icons.Default.Assignment, contentDescription = "Cambiar Proyecto", tint = Color.White)
                     }
@@ -206,30 +226,58 @@ fun ContactoListadoScreen(
             return@Scaffold
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            if (pendientes.isNotEmpty()) {
-                item {
-                    Text("PENDIENTES", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp))
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Buscador rápido
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Buscar contacto...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Limpiar")
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
+            if (filteredContactos.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No se encontraron contactos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                items(pendientes, key = { it.id }) { c ->
-                    ContactoListItem(contacto = c, onClick = { viewModel.seleccionarContacto(c) })
-                }
-            }
-            if (gestionados.isNotEmpty()) {
-                item {
-                    Spacer(Modifier.height(8.dp))
-                    Text("GESTIONADOS", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp))
-                }
-                items(gestionados, key = { it.id }) { c ->
-                    ContactoListItem(contacto = c, onClick = { viewModel.seleccionarContacto(c) })
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (pendientes.isNotEmpty()) {
+                        item {
+                            Text("PENDIENTES", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        items(pendientes, key = { it.id }) { c ->
+                            ContactoListItem(contacto = c, onClick = { viewModel.seleccionarContacto(c) })
+                        }
+                    }
+                    if (gestionados.isNotEmpty()) {
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Text("GESTIONADOS", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        items(gestionados, key = { it.id }) { c ->
+                            ContactoListItem(contacto = c, onClick = { viewModel.seleccionarContacto(c) })
+                        }
+                    }
                 }
             }
         }
@@ -478,6 +526,23 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                     Icon(Icons.Default.Call, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Llamar ahora", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Botón alternativo para registrar llamada recibida o manual
+                OutlinedButton(
+                    onClick = {
+                        viewModel.iniciarRegistroManual()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6366F1)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6366F1))
+                ) {
+                    Icon(Icons.Default.Assignment, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Registrar llamada entrante / manual", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
