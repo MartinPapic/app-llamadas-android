@@ -12,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +31,7 @@ fun ProjectSelectionScreen(
 ) {
     val proyectos by viewModel.proyectos.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.syncProyectos()
@@ -38,13 +42,36 @@ fun ProjectSelectionScreen(
             TopAppBar(
                 title = { Text("Seleccionar Proyecto") },
                 actions = {
-                    IconButton(onClick = onLogout) {
+                    IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 }
             )
         }
     ) { padding ->
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text("Cerrar sesión") },
+                text = { Text("¿Estás seguro de que deseas salir de la sesión?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showLogoutDialog = false
+                            onLogout()
+                        }
+                    ) {
+                        Text("Sí, salir")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
