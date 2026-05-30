@@ -179,6 +179,7 @@ fun ContactoListadoScreen(
     val contactos by viewModel.todosLosContactos.collectAsState()
     
     var searchQuery by remember { mutableStateOf("") }
+    var showLogoutDialog by remember { mutableStateOf(false) }
     
     val filteredContactos = if (searchQuery.isBlank()) {
         contactos
@@ -214,7 +215,7 @@ fun ContactoListadoScreen(
                     IconButton(onClick = onCambiarProyecto) {
                         Icon(Icons.Default.Assignment, contentDescription = "Cambiar Proyecto", tint = Color.White)
                     }
-                    IconButton(onClick = onLogout) {
+                    IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión", tint = Color.White)
                     }
                 },
@@ -230,6 +231,29 @@ fun ContactoListadoScreen(
                 Text("No hay contactos cargados.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Scaffold
+        }
+
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text("Cerrar sesión") },
+                text = { Text("¿Estás seguro de que deseas salir de la sesión?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showLogoutDialog = false
+                            onLogout()
+                        }
+                    ) {
+                        Text("Sí, salir")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
