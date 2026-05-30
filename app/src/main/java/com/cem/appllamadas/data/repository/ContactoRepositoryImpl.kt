@@ -35,6 +35,9 @@ class ContactoRepositoryImpl(
             val response = apiService.getContactos(proyectoId = proyectoId)
             if (response.isSuccessful) {
                 val remotos = response.body() ?: emptyList()
+                val existentes = contactoDao.getAllContactosList()
+                val mapaOrden = existentes.associate { it.id to it.ordenAleatorio }
+
                 val entidades = remotos.map { dto ->
                     ContactoEntity(
                         id = dto.id,
@@ -46,7 +49,8 @@ class ContactoRepositoryImpl(
                         fechaCreacion = dto.fechaCreacion,
                         proyectoId = dto.proyectoId ?: proyectoId,
                         listaId = dto.listaId,
-                        referenciaId = dto.referenciaId
+                        referenciaId = dto.referenciaId,
+                        ordenAleatorio = mapaOrden[dto.id] ?: (0..Int.MAX_VALUE).random()
                     )
                 }
                 if (proyectoId != null) {
@@ -114,7 +118,8 @@ class ContactoRepositoryImpl(
         proyectoId = proyectoId,
         listaId = listaId,
         referenciaId = referenciaId,
-        intentosValidos = intentosValidos
+        intentosValidos = intentosValidos,
+        ordenAleatorio = ordenAleatorio
     )
 
     private fun Contacto.toEntity() = ContactoEntity(
@@ -130,6 +135,7 @@ class ContactoRepositoryImpl(
         proyectoId = proyectoId,
         listaId = listaId,
         referenciaId = referenciaId,
-        intentosValidos = intentosValidos
+        intentosValidos = intentosValidos,
+        ordenAleatorio = ordenAleatorio
     )
 }

@@ -76,7 +76,9 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "app_llamadas_db"
-        ).fallbackToDestructiveMigration().build()
+        ).addMigrations(AppDatabase.MIGRATION_8_9)
+         .fallbackToDestructiveMigration()
+         .build()
     }
 
     @Provides

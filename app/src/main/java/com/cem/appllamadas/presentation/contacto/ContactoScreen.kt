@@ -10,7 +10,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -90,6 +92,8 @@ fun ContactoScreen(
     val errorConcurrencia by viewModel.errorConcurrencia.collectAsState()
 
     val tipificaciones by viewModel.tipificaciones.collectAsState()
+    
+    val listState = rememberLazyListState()
 
     // Sincronizar si entramos a post-llamada y no hay datos
     LaunchedEffect(postCall) {
@@ -153,7 +157,8 @@ fun ContactoScreen(
         else -> ContactoListadoScreen(
             viewModel = viewModel, 
             onLogout = onLogout,
-            onCambiarProyecto = onVolverAProyectos
+            onCambiarProyecto = onVolverAProyectos,
+            listState = listState
         )
     }
 }
@@ -167,7 +172,8 @@ fun ContactoScreen(
 fun ContactoListadoScreen(
     viewModel: ContactoViewModel, 
     onLogout: () -> Unit,
-    onCambiarProyecto: () -> Unit
+    onCambiarProyecto: () -> Unit,
+    listState: LazyListState = rememberLazyListState()
 ) {
     val proyectoActual by viewModel.proyectoSeleccionado.collectAsState()
     val contactos by viewModel.todosLosContactos.collectAsState()
@@ -254,6 +260,7 @@ fun ContactoListadoScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {

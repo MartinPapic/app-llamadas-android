@@ -19,6 +19,7 @@ interface ContactoDao {
                 WHEN estado = 'PENDIENTE' THEN 1 
                 ELSE 2 
             END ASC,
+            ordenAleatorio ASC,
             intentos ASC,
             IFNULL(fechaUltimaGestion, 0) ASC
         LIMIT 1
@@ -50,8 +51,12 @@ interface ContactoDao {
                 WHEN estado = 'CONTACTADO' THEN 3 
                 ELSE 4 
             END ASC,
+            ordenAleatorio ASC,
             intentos ASC,
             IFNULL(fechaUltimaGestion, 0) ASC
     """)
     fun getAllContactos(): Flow<List<ContactoEntity>>
+
+    @Query("SELECT * FROM contacto")
+    suspend fun getAllContactosList(): List<ContactoEntity>
 }

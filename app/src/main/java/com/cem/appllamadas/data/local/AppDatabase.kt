@@ -3,6 +3,8 @@ package com.cem.appllamadas.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.cem.appllamadas.data.local.dao.ContactoDao
 import com.cem.appllamadas.data.local.dao.LlamadaDao
 import com.cem.appllamadas.data.local.entity.ContactoEntity
@@ -14,7 +16,7 @@ import com.cem.appllamadas.data.local.entity.TipificacionEntity
 
 @Database(
     entities = [ContactoEntity::class, LlamadaEntity::class, ProyectoEntity::class, TipificacionEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -23,4 +25,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val llamadaDao: LlamadaDao
     abstract val proyectoDao: ProyectoDao
     abstract val tipificacionDao: TipificacionDao
+
+    companion object {
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE contacto ADD COLUMN ordenAleatorio INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+    }
 }

@@ -17,5 +17,6 @@ data class Contacto(
     val proyectoId: String? = null,
     val listaId: String? = null,
     val referenciaId: String? = null,
-    val intentosValidos: Int = 0
+    val intentosValidos: Int = 0,
+    val ordenAleatorio: Int = 0
 )
