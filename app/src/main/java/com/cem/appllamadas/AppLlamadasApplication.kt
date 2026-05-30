@@ -28,6 +28,9 @@ class AppLlamadasApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         
+        // Instalar el Cazador de Crashes (Crash Catcher)
+        Thread.setDefaultUncaughtExceptionHandler(com.cem.appllamadas.util.CrashHandler(this))
+        
         // Programar sync periódico con red (evita duplicados con UniquePeriodicWork)
         com.cem.appllamadas.worker.SyncWorker.schedule(this)
 

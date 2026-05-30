@@ -40,8 +40,8 @@ sealed class CallState {
 class CallStateManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val telephonyManager =
-        context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+    private val telephonyManager: TelephonyManager? =
+        context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
 
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
     val callState: StateFlow<CallState> = _callState.asStateFlow()
@@ -133,13 +133,21 @@ class CallStateManager @Inject constructor(
         _callState.value  = CallState.Calling
         // Register listener — Android will immediately fire the current IDLE state.
         // The hasSeenActiveState guard above will properly ignore it.
-        telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
+        try {
+            telephonyManager?.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
+        } catch (e: SecurityException) {
+            // Ignorar si no hay permisos
+        }
     }
 
     @Suppress("DEPRECATION")
     private fun stopTracking() {
         isTracking = false
-        telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE)
+        try {
+            telephonyManager?.listen(listener, PhoneStateListener.LISTEN_NONE)
+        } catch (e: SecurityException) {
+            // Ignorar
+        }
     }
 
     fun resetState() {

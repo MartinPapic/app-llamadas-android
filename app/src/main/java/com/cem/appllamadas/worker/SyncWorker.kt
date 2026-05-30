@@ -111,6 +111,10 @@ class SyncWorker @AssistedInject constructor(
             .setAutoCancel(true)
             .build()
 
-        notifManager.notify(NOTIF_ID, notification)
+        try {
+            notifManager.notify(NOTIF_ID, notification)
+        } catch (e: SecurityException) {
+            // Ignorar si el usuario no concedió permiso de notificaciones en Android 13+
+        }
     }
 }

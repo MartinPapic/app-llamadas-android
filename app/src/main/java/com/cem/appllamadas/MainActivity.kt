@@ -15,6 +15,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import android.content.Context
 import com.cem.appllamadas.data.local.SessionManager
 import com.cem.appllamadas.presentation.contacto.ContactoScreen
 import com.cem.appllamadas.presentation.contacto.ContactoViewModel
@@ -37,11 +47,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val prefs = getSharedPreferences("app_crash_prefs", Context.MODE_PRIVATE)
+            val lastCrash = prefs.getString("last_crash", null)
+            var showCrashDialog by remember { mutableStateOf(lastCrash != null) }
+
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    if (showCrashDialog) {
+                        AlertDialog(
+                            onDismissRequest = { 
+                                showCrashDialog = false
+                                prefs.edit().remove("last_crash").apply()
+                            },
+                            title = { Text("Reporte de Caída (Crash)") },
+                            text = { 
+                                Column(Modifier.verticalScroll(rememberScrollState())) {
+                                    Text("La aplicación se cerró inesperadamente en la sesión anterior por este motivo. Por favor, toma una captura de pantalla y envíasela a soporte:\n\n$lastCrash")
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { 
+                                    showCrashDialog = false
+                                    prefs.edit().remove("last_crash").apply()
+                                }) { Text("Entendido") }
+                            }
+                        )
+                    }
+
                     val navController = rememberNavController()
 
                     // Si hay sesión activa, ir a selección de proyecto; si no, al login
