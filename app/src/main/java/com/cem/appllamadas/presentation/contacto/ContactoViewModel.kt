@@ -185,6 +185,9 @@ class ContactoViewModel @Inject constructor(
             }.onFailure { e ->
                 if (e.message == "CONCURRENCE_ERROR") {
                     _errorConcurrencia.value = "Este contacto ya está siendo gestionado por otro agente. Por favor, selecciona otro."
+                } else if (e.message == "LIST_CLOSED") {
+                    _errorConcurrencia.value = "La lista ha alcanzado el límite máximo de gestiones exitosas. No se pueden hacer más llamadas."
+                    forceRefresh()
                 } else {
                     // Si falla por red, en este modelo de pool es crítico, no permitimos llamar
                     _errorConcurrencia.value = "Error de conexión: No se pudo verificar la exclusividad del contacto. Verifica tu internet."
@@ -291,6 +294,9 @@ class ContactoViewModel @Inject constructor(
             }.onFailure { e ->
                 if (e.message == "CONCURRENCE_ERROR") {
                     _errorConcurrencia.value = "Este contacto ya está siendo gestionado por otro agente. Por favor, selecciona otro."
+                } else if (e.message == "LIST_CLOSED") {
+                    _errorConcurrencia.value = "La lista ha alcanzado el límite máximo de gestiones exitosas. No se pueden hacer más llamadas."
+                    forceRefresh()
                 } else {
                     _errorConcurrencia.value = "Error de conexión: No se pudo verificar la exclusividad del contacto. Verifica tu internet."
                 }
