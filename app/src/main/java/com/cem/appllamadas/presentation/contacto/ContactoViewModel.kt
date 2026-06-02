@@ -250,8 +250,9 @@ class ContactoViewModel @Inject constructor(
         val intentoHoy = _historialLlamadas.value.any { 
             java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
         }
-        // Si se reseteó recientemente (0 intentos válidos), forzamos que el siguiente sea válido
-        val intentoValido = (contacto.intentosValidos == 0) || !intentoHoy
+        // El usuario solicitó que si deciden tipificar nuevamente el mismo día (ej. el cliente devolvió la llamada), 
+        // el intento DEBE contar y ser válido. Mantenemos la alerta visual en la UI, pero el registro es válido.
+        val intentoValido = true
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -330,7 +331,8 @@ class ContactoViewModel @Inject constructor(
         val intentoHoy = _historialLlamadas.value.any { 
             java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.fechaInicio)) == hoyStr 
         }
-        val intentoValido = (contacto.intentosValidos == 0) || !intentoHoy
+        // Si el cliente devolvió la llamada, el agente debe poder tipificar manual y que sea válido
+        val intentoValido = true
 
         viewModelScope.launch {
             _isLoading.value = true
