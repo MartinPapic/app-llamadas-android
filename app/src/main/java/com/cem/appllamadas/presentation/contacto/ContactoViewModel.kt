@@ -17,6 +17,7 @@ import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
 import com.cem.appllamadas.worker.SyncWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 
@@ -142,6 +144,10 @@ class ContactoViewModel @Inject constructor(
                         fechaInicio = result.fechaInicio,
                         fechaFin    = result.fechaFin
                     )
+                } else if (state is CallState.Error) {
+                    _errorConcurrencia.value = state.mensaje
+                    callStateManager.resetState()
+                    _mostrarListado.value = true
                 }
             }
         }
@@ -248,6 +254,7 @@ class ContactoViewModel @Inject constructor(
         val intentoValido = (contacto.intentosValidos == 0) || !intentoHoy
 
         viewModelScope.launch {
+            _isLoading.value = true
             val llamada = Llamada(
                 id           = UUID.randomUUID().toString(),
                 contactoId   = contacto.id,
@@ -264,14 +271,18 @@ class ContactoViewModel @Inject constructor(
                 intentoValido = intentoValido
             )
             
-            val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
-            val cierraCaso = tipObj?.cierraCaso ?: false
+            withContext(Dispatchers.IO) {
+                val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
+                val cierraCaso = tipObj?.cierraCaso ?: false
 
-            registrarLlamadaUseCase(llamada, contacto, cierraCaso)
+                registrarLlamadaUseCase(llamada, contacto, cierraCaso)
+                // Sync inmediato si hay red
+                SyncWorker.dispatchImmediate(context)
+            }
+            
             _postCallState.value = null
             callStateManager.resetState()
-            // Sync inmediato si hay red
-            SyncWorker.dispatchImmediate(context)
+            _isLoading.value = false
 
             volverAlListado()
         }
@@ -322,6 +333,7 @@ class ContactoViewModel @Inject constructor(
         val intentoValido = (contacto.intentosValidos == 0) || !intentoHoy
 
         viewModelScope.launch {
+            _isLoading.value = true
             val llamada = Llamada(
                 id           = UUID.randomUUID().toString(),
                 contactoId   = contacto.id,
@@ -337,13 +349,17 @@ class ContactoViewModel @Inject constructor(
                 listaId      = contacto.listaId,
                 intentoValido = intentoValido
             )
-            val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
-            val cierraCaso = tipObj?.cierraCaso ?: false
 
-            registrarLlamadaUseCase(llamada, contacto, cierraCaso)
-            // Sync inmediato si hay red
-            SyncWorker.dispatchImmediate(context)
+            withContext(Dispatchers.IO) {
+                val tipObj = _tipificaciones.value.find { it.nombre.equals(tipificacion, ignoreCase = true) }
+                val cierraCaso = tipObj?.cierraCaso ?: false
 
+                registrarLlamadaUseCase(llamada, contacto, cierraCaso)
+                // Sync inmediato si hay red
+                SyncWorker.dispatchImmediate(context)
+            }
+
+            _isLoading.value = false
             volverAlListado()
         }
     }

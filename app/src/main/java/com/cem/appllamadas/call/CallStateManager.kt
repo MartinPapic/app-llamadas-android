@@ -9,6 +9,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +29,7 @@ sealed class CallState {
     object Calling  : CallState()    // call initiated (dialing)
     object Answered : CallState()    // OFFHOOK — call connected
     data class Ended(val result: CallResult) : CallState()
+    data class Error(val mensaje: String) : CallState()
 }
 
 /**
@@ -60,6 +66,9 @@ class CallStateManager @Inject constructor(
      */
     private var hasSeenActiveState: Boolean = false
 
+    private val scope = CoroutineScope(Dispatchers.Default)
+    private var timeoutJob: Job? = null
+
     private val listener = object : PhoneStateListener() {
         @Suppress("DEPRECATION")
         override fun onCallStateChanged(state: Int, phoneNumber: String?) {
@@ -68,6 +77,7 @@ class CallStateManager @Inject constructor(
             when (state) {
                 TelephonyManager.CALL_STATE_OFFHOOK -> {
                     // Call is active (connected). Record exact answer time.
+                    timeoutJob?.cancel()
                     hasSeenActiveState = true
                     wasAnswered = true
                     offhookTime = System.currentTimeMillis()
@@ -77,6 +87,7 @@ class CallStateManager @Inject constructor(
                 TelephonyManager.CALL_STATE_RINGING -> {
                     // Outgoing call is ringing on the other side.
                     // Mark as active so IDLE after this is not ignored.
+                    timeoutJob?.cancel()
                     hasSeenActiveState = true
                 }
 
@@ -131,6 +142,16 @@ class CallStateManager @Inject constructor(
         trackingStartTime = System.currentTimeMillis()
         isTracking        = true
         _callState.value  = CallState.Calling
+
+        timeoutJob?.cancel()
+        timeoutJob = scope.launch {
+            delay(15000L) // 15 seconds timeout
+            if (isTracking && !hasSeenActiveState && _callState.value is CallState.Calling) {
+                _callState.value = CallState.Error("La llamada finalizó sin poder conectar. Por favor intenta de nuevo.")
+                stopTracking()
+            }
+        }
+
         // Register listener — Android will immediately fire the current IDLE state.
         // The hasSeenActiveState guard above will properly ignore it.
         try {
@@ -142,6 +163,7 @@ class CallStateManager @Inject constructor(
 
     @Suppress("DEPRECATION")
     private fun stopTracking() {
+        timeoutJob?.cancel()
         isTracking = false
         try {
             telephonyManager?.listen(listener, PhoneStateListener.LISTEN_NONE)
