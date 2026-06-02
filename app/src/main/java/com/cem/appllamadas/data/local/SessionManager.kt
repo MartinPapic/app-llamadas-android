@@ -25,6 +25,9 @@ class SessionManager @Inject constructor(
         private const val KEY_USER_ID       = "user_id"
         private const val KEY_NOMBRE        = "nombre"
         private const val KEY_ROL           = "rol"
+
+        private const val KEY_SAVED_EMAIL   = "saved_email"
+        private const val KEY_SAVED_PASSWORD= "saved_password"
     }
 
     private val prefs: SharedPreferences by lazy {
@@ -72,6 +75,31 @@ class SessionManager @Inject constructor(
     fun isLoggedIn(): Boolean = getAccessToken() != null
 
     fun clearSession() {
-        prefs.edit().clear().apply()
+        prefs.edit()
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_USER_ID)
+            .remove(KEY_NOMBRE)
+            .remove(KEY_ROL)
+            .apply()
+    }
+
+    // --- Funciones para Recordar Credenciales ---
+
+    fun saveCredentials(email: String, pass: String) {
+        prefs.edit()
+            .putString(KEY_SAVED_EMAIL, email)
+            .putString(KEY_SAVED_PASSWORD, pass)
+            .apply()
+    }
+
+    fun getSavedEmail(): String? = prefs.getString(KEY_SAVED_EMAIL, null)
+    fun getSavedPassword(): String? = prefs.getString(KEY_SAVED_PASSWORD, null)
+
+    fun clearCredentials() {
+        prefs.edit()
+            .remove(KEY_SAVED_EMAIL)
+            .remove(KEY_SAVED_PASSWORD)
+            .apply()
     }
 }

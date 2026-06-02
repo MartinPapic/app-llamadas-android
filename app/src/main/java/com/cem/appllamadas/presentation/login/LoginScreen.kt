@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -34,9 +35,12 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    var email    by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val formData by viewModel.formData.collectAsState()
+
+    var email    by remember(formData.email) { mutableStateOf(formData.email) }
+    var password by remember(formData.pass) { mutableStateOf(formData.pass) }
     var passwordVisible by remember { mutableStateOf(false) }
+    var rememberMe by remember(formData.remember) { mutableStateOf(formData.remember) }
 
     // Navigate on success
     LaunchedEffect(uiState) {
@@ -136,13 +140,40 @@ fun LoginScreen(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             focusManager.clearFocus()
-                            viewModel.login(email, password)
+                            viewModel.login(email, password, rememberMe)
                         }
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     colors = loginFieldColors(),
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                // Remember me checkbox
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = rememberMe,
+                            onValueChange = { rememberMe = it }
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = rememberMe,
+                        onCheckedChange = null,
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF6366F1),
+                            uncheckedColor = Color(0xFF94A3B8)
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Guardar contraseña",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 14.sp
+                    )
+                }
 
                 // Error message
                 AnimatedVisibility(visible = uiState is LoginUiState.Error) {
@@ -158,7 +189,7 @@ fun LoginScreen(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        viewModel.login(email, password)
+                        viewModel.login(email, password, rememberMe)
                     },
                     enabled = uiState !is LoginUiState.Loading,
                     modifier = Modifier

@@ -24,6 +24,12 @@ sealed class LoginUiState {
     data class Error(val mensaje: String) : LoginUiState()
 }
 
+data class LoginFormData(
+    val email: String = "",
+    val pass: String = "",
+    val remember: Boolean = false
+)
+
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authApiService: AuthApiService,
@@ -36,10 +42,27 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
-    fun login(email: String, password: String) {
+    private val _formData = MutableStateFlow(LoginFormData())
+    val formData: StateFlow<LoginFormData> = _formData
+
+    init {
+        val savedEmail = sessionManager.getSavedEmail()
+        val savedPass = sessionManager.getSavedPassword()
+        if (!savedEmail.isNullOrBlank() && !savedPass.isNullOrBlank()) {
+            _formData.value = LoginFormData(savedEmail, savedPass, true)
+        }
+    }
+
+    fun login(email: String, password: String, rememberMe: Boolean) {
         if (email.isBlank() || password.isBlank()) {
             _uiState.value = LoginUiState.Error("Ingresa tu email y contraseña")
             return
+        }
+
+        if (rememberMe) {
+            sessionManager.saveCredentials(email, password)
+        } else {
+            sessionManager.clearCredentials()
         }
 
         viewModelScope.launch {
