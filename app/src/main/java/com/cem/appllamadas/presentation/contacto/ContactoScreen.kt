@@ -659,6 +659,7 @@ fun PostCallForm(
     
     var expandedTip  by remember { mutableStateOf(false) }
     var expandedMot  by remember { mutableStateOf(false) }
+    var showError    by remember { mutableStateOf(false) }
 
     val noContestaDisabled = duracion < MIN_CALL_DURATION_SEC
 
@@ -790,16 +791,28 @@ fun PostCallForm(
                 minLines = 3
             )
 
-            Spacer(Modifier.height(8.dp))
+            // MENSAJE DE ERROR
+            if (showError) {
+                Text(
+                    text = "Por favor, completa todos los campos requeridos (Resultado, Tipificación y Motivo).",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
 
             // GUARDAR
             Button(
                 onClick = {
                     if (resultadoSeleccionado != null && tipificacion != null && motivo != null) {
+                        showError = false
                         onConfirmar(resultadoSeleccionado!!, tipificacion!!, motivo, observacion)
+                    } else {
+                        showError = true
                     }
                 },
-                enabled = resultadoSeleccionado != null && tipificacion != null && motivo != null,
+                enabled = true, // Siempre activo para poder mostrar el error
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
