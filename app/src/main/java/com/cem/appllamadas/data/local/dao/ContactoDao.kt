@@ -15,7 +15,10 @@ interface ContactoDao {
         WHERE estado NOT IN ('DESISTIDO', 'CONTACTADO') 
         ORDER BY 
             CASE 
-                WHEN ultimaTipificacion = 'Llamar más tarde' THEN 0
+                WHEN ultimaTipificacion LIKE '%Llamar m_s tarde%' THEN 0
+                WHEN ultimaTipificacion LIKE '%llamar m_s tarde%' THEN 0
+                WHEN ultimaTipificacion LIKE '%Llamar mas tarde%' THEN 0
+                WHEN ultimaTipificacion LIKE '%llamar mas tarde%' THEN 0
                 WHEN estado = 'PENDIENTE' THEN 1 
                 ELSE 2 
             END ASC,
@@ -45,7 +48,10 @@ interface ContactoDao {
         SELECT * FROM contacto 
         ORDER BY 
             CASE 
-                WHEN ultimaTipificacion = 'Llamar más tarde' THEN 0
+                WHEN ultimaTipificacion LIKE '%Llamar m_s tarde%' THEN 0
+                WHEN ultimaTipificacion LIKE '%llamar m_s tarde%' THEN 0
+                WHEN ultimaTipificacion LIKE '%Llamar mas tarde%' THEN 0
+                WHEN ultimaTipificacion LIKE '%llamar mas tarde%' THEN 0
                 WHEN estado = 'PENDIENTE' THEN 1 
                 WHEN estado = 'EN_GESTION' THEN 2 
                 WHEN estado = 'CONTACTADO' THEN 3 
