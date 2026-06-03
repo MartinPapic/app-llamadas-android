@@ -54,7 +54,10 @@ data class ContactoDto(
     val fechaCreacion: Long,
     val listaId: String?,
     val referenciaId: String?,
-    val proyectoId: String?
+    val proyectoId: String?,
+    val ultimaTipificacion: String? = null,
+    val ultimaObservacion: String? = null,
+    val fechaUltimaGestion: Long? = null
 )
 
 data class TipificacionDto(

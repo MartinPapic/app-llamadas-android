@@ -36,9 +36,10 @@ class ContactoRepositoryImpl(
             if (response.isSuccessful) {
                 val remotos = response.body() ?: emptyList()
                 val existentes = contactoDao.getAllContactosList()
-                val mapaOrden = existentes.associate { it.id to it.ordenAleatorio }
+                val mapaLocal = existentes.associateBy { it.id }
 
                 val entidades = remotos.map { dto ->
+                    val local = mapaLocal[dto.id]
                     ContactoEntity(
                         id = dto.id,
                         nombre = dto.nombre,
@@ -50,7 +51,10 @@ class ContactoRepositoryImpl(
                         proyectoId = dto.proyectoId ?: proyectoId,
                         listaId = dto.listaId,
                         referenciaId = dto.referenciaId,
-                        ordenAleatorio = mapaOrden[dto.id] ?: (0..Int.MAX_VALUE).random()
+                        ordenAleatorio = local?.ordenAleatorio ?: (0..Int.MAX_VALUE).random(),
+                        ultimaTipificacion = dto.ultimaTipificacion ?: local?.ultimaTipificacion,
+                        ultimaObservacion = dto.ultimaObservacion ?: local?.ultimaObservacion,
+                        fechaUltimaGestion = dto.fechaUltimaGestion ?: local?.fechaUltimaGestion
                     )
                 }
                 if (proyectoId != null) {
