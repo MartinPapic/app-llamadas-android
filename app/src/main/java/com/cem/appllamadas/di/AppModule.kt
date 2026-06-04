@@ -20,6 +20,7 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import kotlinx.coroutines.launch
 import javax.inject.Singleton
 
 @Module
@@ -30,7 +31,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(sessionManager: SessionManager): OkHttpClient {
+    fun provideOkHttpClient(sessionManager: SessionManager, appDatabase: AppDatabase): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val token = sessionManager.getAccessToken()
@@ -47,6 +48,14 @@ object AppModule {
                 // Si el servidor devuelve 401 (Usuario desactivado o token expirado), forzamos logout global
                 if (response.code() == 401) {
                     sessionManager.triggerLogout()
+                    // Asegurar que la base de datos local se elimine inmediatamente de forma asncrona
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        try {
+                            appDatabase.clearAllTables()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
                 
                 response
