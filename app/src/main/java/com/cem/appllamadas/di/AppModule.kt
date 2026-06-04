@@ -28,7 +28,6 @@ object AppModule {
 
     private const val BASE_URL = "https://app-llamadas-backend-production.up.railway.app"
 
-    /** OkHttpClient con interceptor JWT — agrega Authorization: Bearer <token> a cada request */
     @Provides
     @Singleton
     fun provideOkHttpClient(sessionManager: SessionManager): OkHttpClient {
@@ -42,7 +41,15 @@ object AppModule {
                 } else {
                     chain.request()
                 }
-                chain.proceed(request)
+                
+                val response = chain.proceed(request)
+                
+                // Si el servidor devuelve 401 (Usuario desactivado o token expirado), forzamos logout global
+                if (response.code() == 401) {
+                    sessionManager.triggerLogout()
+                }
+                
+                response
             }
             .build()
     }

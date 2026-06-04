@@ -8,6 +8,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
 /**
  * Gestiona la sesión del usuario guardando el JWT de forma cifrada
  * con EncryptedSharedPreferences (RNF-A9).
@@ -18,6 +21,8 @@ import javax.inject.Singleton
 class SessionManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val _logoutEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val logoutEvent = _logoutEvent.asSharedFlow()
     companion object {
         private const val PREFS_FILE = "secure_session"
         private const val KEY_ACCESS_TOKEN  = "access_token"
@@ -82,6 +87,11 @@ class SessionManager @Inject constructor(
             .remove(KEY_NOMBRE)
             .remove(KEY_ROL)
             .apply()
+    }
+
+    fun triggerLogout() {
+        clearSession()
+        _logoutEvent.tryEmit(Unit)
     }
 
     // --- Funciones para Recordar Credenciales ---

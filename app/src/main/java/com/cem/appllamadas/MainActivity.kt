@@ -79,6 +79,15 @@ class MainActivity : ComponentActivity() {
 
                     val navController = rememberNavController()
 
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        sessionManager.logoutEvent.collect {
+                            contactoViewModel.logout()
+                            navController.navigate("login") {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        }
+                    }
+
                     // Si hay sesión activa, ir a selección de proyecto; si no, al login
                     val startDestination = if (sessionManager.isLoggedIn()) "seleccion_proyecto" else "login"
 
