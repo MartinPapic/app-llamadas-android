@@ -45,8 +45,8 @@ object AppModule {
                 
                 val response = chain.proceed(request)
                 
-                // Si el servidor devuelve 401 (Usuario desactivado o token expirado), forzamos logout global
-                if (response.code() == 401) {
+                // Si el servidor devuelve 401 o 403 (Usuario desactivado, sin permisos o token expirado), forzamos logout global
+                if (response.code() == 401 || response.code() == 403) {
                     sessionManager.triggerLogout()
                     // Asegurar que la base de datos local se elimine inmediatamente de forma asncrona
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
