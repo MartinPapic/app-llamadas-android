@@ -137,8 +137,8 @@ fun ContactoScreen(
         postCall != null -> PostCallForm(
             duracion  = postCall!!.duracion,
             tipificaciones = tipificaciones,
-            onConfirmar = { resultado, tipo, motivo, obs ->
-                viewModel.confirmarRegistro(resultado, tipo, motivo, obs)
+            onConfirmar = { resultado, tipo, motivo, obs, duracionManual ->
+                viewModel.confirmarRegistro(resultado, tipo, motivo, obs, duracionManual)
             },
             onCancelar = { viewModel.volverAlListado() }
         )
@@ -649,13 +649,16 @@ fun CallInProgressScreen(answered: Boolean) {
 fun PostCallForm(
     duracion: Int,
     tipificaciones: List<com.cem.appllamadas.domain.model.Tipificacion>,
-    onConfirmar: (ResultadoLlamada, String, String?, String) -> Unit,
+    onConfirmar: (ResultadoLlamada, String, String?, String, Int?) -> Unit,
     onCancelar: () -> Unit
 ) {
     var resultadoSeleccionado by remember { mutableStateOf<ResultadoLlamada?>(null) }
     var tipificacion by remember { mutableStateOf<String?>(null) }
     var motivo       by remember { mutableStateOf<String?>(null) }
     var observacion  by remember { mutableStateOf("") }
+    
+    var manualMinutos by remember { mutableStateOf("") }
+    var manualSegundos by remember { mutableStateOf("") }
     
     var expandedTip  by remember { mutableStateOf(false) }
     var expandedMot  by remember { mutableStateOf(false) }
@@ -697,6 +700,30 @@ fun PostCallForm(
                     Text("⏱ Duración de la llamada: ${duracion}s",
                         color = Color(0xFF10B981), fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(16.dp))
+                }
+            } else {
+                Text("⏱ Duración de la llamada (Manual) *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    OutlinedTextField(
+                        value = manualMinutos,
+                        onValueChange = { manualMinutos = it.filter { char -> char.isDigit() } },
+                        label = { Text("Minutos") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        isError = showError && manualMinutos.isBlank() && manualSegundos.isBlank()
+                    )
+                    OutlinedTextField(
+                        value = manualSegundos,
+                        onValueChange = { manualSegundos = it.filter { char -> char.isDigit() } },
+                        label = { Text("Segundos") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        isError = showError && manualMinutos.isBlank() && manualSegundos.isBlank()
+                    )
                 }
             }
 
@@ -791,10 +818,25 @@ fun PostCallForm(
                 minLines = 3
             )
 
+            var showPopupError by remember { mutableStateOf(false) }
+
+            if (showPopupError) {
+                AlertDialog(
+                    onDismissRequest = { showPopupError = false },
+                    title = { Text("Faltan campos requeridos") },
+                    text = { Text("Por favor, completa todos los campos requeridos: Resultado, Tipificación, Motivo y Duración.") },
+                    confirmButton = {
+                        TextButton(onClick = { showPopupError = false }) {
+                            Text("Aceptar")
+                        }
+                    }
+                )
+            }
+
             // MENSAJE DE ERROR
             if (showError) {
                 Text(
-                    text = "Por favor, completa todos los campos requeridos (Resultado, Tipificación y Motivo).",
+                    text = "Por favor, completa todos los campos requeridos.",
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
@@ -805,11 +847,17 @@ fun PostCallForm(
             // GUARDAR
             Button(
                 onClick = {
-                    if (resultadoSeleccionado != null && tipificacion != null && motivo != null) {
+                    val m = manualMinutos.toIntOrNull() ?: 0
+                    val s = manualSegundos.toIntOrNull() ?: 0
+                    val duracionIngresada = m * 60 + s
+                    val duracionValida = duracion > 0 || manualMinutos.isNotBlank() || manualSegundos.isNotBlank()
+                    
+                    if (resultadoSeleccionado != null && tipificacion != null && motivo != null && duracionValida) {
                         showError = false
-                        onConfirmar(resultadoSeleccionado!!, tipificacion!!, motivo, observacion)
+                        onConfirmar(resultadoSeleccionado!!, tipificacion!!, motivo, observacion, if (duracion == 0) duracionIngresada else null)
                     } else {
                         showError = true
+                        showPopupError = true
                     }
                 },
                 enabled = true, // Siempre activo para poder mostrar el error

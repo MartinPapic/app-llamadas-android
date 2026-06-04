@@ -240,7 +240,8 @@ class ContactoViewModel @Inject constructor(
         resultadoSeleccionado: ResultadoLlamada,
         tipificacion: String,
         motivo: String?,
-        observacion: String
+        observacion: String,
+        duracionManual: Int? = null
     ) {
         val post     = _postCallState.value ?: return
         val contacto = _contactoActual.value ?: return
@@ -254,6 +255,8 @@ class ContactoViewModel @Inject constructor(
         // el intento DEBE contar y ser válido. Mantenemos la alerta visual en la UI, pero el registro es válido.
         val intentoValido = true
 
+        val duracionFinal = duracionManual ?: post.duracion
+
         viewModelScope.launch {
             _isLoading.value = true
             val llamada = Llamada(
@@ -262,7 +265,7 @@ class ContactoViewModel @Inject constructor(
                 usuarioId    = userId,
                 fechaInicio  = post.fechaInicio,
                 fechaFin     = post.fechaFin,
-                duracion     = post.duracion,
+                duracion     = duracionFinal,
                 resultado    = resultadoSeleccionado,
                 tipificacion = tipificacion,
                 motivo       = motivo,
