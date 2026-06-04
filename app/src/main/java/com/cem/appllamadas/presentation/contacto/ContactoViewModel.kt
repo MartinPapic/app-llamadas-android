@@ -12,6 +12,7 @@ import com.cem.appllamadas.domain.model.ResultadoLlamada
 import com.cem.appllamadas.domain.repository.ContactoRepository
 import com.cem.appllamadas.domain.repository.TipificacionRepository
 import com.cem.appllamadas.domain.model.Tipificacion
+import com.cem.appllamadas.data.local.AppDatabase
 import com.cem.appllamadas.domain.usecase.ObtenerSiguienteContactoUseCase
 import com.cem.appllamadas.domain.usecase.RegistrarLlamadaUseCase
 import com.cem.appllamadas.worker.SyncWorker
@@ -46,6 +47,7 @@ class ContactoViewModel @Inject constructor(
     private val proyectoRepository: com.cem.appllamadas.domain.repository.ProyectoRepository,
     private val llamadaRepository: com.cem.appllamadas.domain.repository.LlamadaRepository,
     private val sessionManager: SessionManager,
+    private val appDatabase: AppDatabase,
     val callStateManager: CallStateManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -372,5 +374,8 @@ class ContactoViewModel @Inject constructor(
 
     fun logout() {
         sessionManager.clearSession()
+        viewModelScope.launch(Dispatchers.IO) {
+            appDatabase.clearAllTables()
+        }
     }
 }
