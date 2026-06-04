@@ -43,15 +43,24 @@ import com.cem.appllamadas.domain.model.EstadoContacto
 import com.cem.appllamadas.domain.model.ResultadoLlamada
 
 
-private val MOTIVOS_DISPONIBLES = listOf(
-    "N/A (General)", "GESTION_EXITOSA", "TRABAJANDO", "OCUPADO",
-    "EN_TRANSITO", "MALA_SENAL", "DESCONFIANZA", "NO_INTERES", 
-    "MALA_EXPERIENCIA", "NO_QUIERE_DATOS", "IDIOMA_DISTINTO",
-    "POCO_TIEMPO", "SOLICITA_LLAMADA_LUEGO", "DATOS_ERRONEOS"
-)
+private fun getMotivosParaTipificacion(tipificacion: String?): List<String> {
+    if (tipificacion == null) return emptyList()
+    return when (tipificacion) {
+        "Contactado", "Envío de encuesta por mail" -> 
+            listOf("GESTION_EXITOSA")
+        "Llamar más tarde" -> 
+            listOf("TRABAJANDO", "OCUPADO", "EN_TRANSITO", "MALA_SENAL", "POCO_TIEMPO", "SOLICITA_LLAMADA_LUEGO")
+        "No quiero participar" -> 
+            listOf("NO_INTERES", "DESCONFIANZA", "MALA_EXPERIENCIA", "IDIOMA_DISTINTO", "SE_NIEGA_A_ENTREGAR_DATOS")
+        "Corta el llamado" -> 
+            listOf("N/A (General)", "DESCONFIANZA", "NO_INTERES")
+        else -> 
+            listOf("N/A (General)")
+    }
+}
 
 // ─── Anti-fraude: duración mínima para permitir ciertos estados ──────────────
-private const val MIN_CALL_DURATION_SEC = 0
+private const val MIN_CALL_DURATION_SEC = 15
 
 
 // ─── Colores por estado ───────────────────────────────────────────────────────
@@ -664,7 +673,7 @@ fun PostCallForm(
     var expandedMot  by remember { mutableStateOf(false) }
     var showError    by remember { mutableStateOf(false) }
 
-    val noContestaDisabled = duracion < MIN_CALL_DURATION_SEC
+    val advertenciaEfectivo = duracion in 1 until MIN_CALL_DURATION_SEC
 
     Scaffold(
         topBar = {
@@ -730,10 +739,9 @@ fun PostCallForm(
             // 1. RESULTADO PRINCIPAL
             Text("1. Resultado Principal *", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             
-            // Warning if not answered enough
-            if (noContestaDisabled) {
-              Text("⚠ Ciertos estados de \"No Contactado\" requieren una mayor duración detectada.", 
-                  color = Color(0xFFF59E0B), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            if (advertenciaEfectivo && resultadoSeleccionado == ResultadoLlamada.CONTACTADO_EFECTIVO) {
+              Text("⚠ Advertencia: La duración de esta llamada es inusualmente corta para una Gestión Exitosa. Este registro será marcado para auditoría.", 
+                  color = Color(0xFFEF4444), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
             }
 
             ResultadoSelector(
@@ -797,7 +805,7 @@ fun PostCallForm(
                             isError = tipificacion != null && motivo == null
                         )
                         ExposedDropdownMenu(expanded = expandedMot, onDismissRequest = { expandedMot = false }) {
-                            MOTIVOS_DISPONIBLES.forEach { opcion ->
+                            getMotivosParaTipificacion(tipificacion).forEach { opcion ->
                                 DropdownMenuItem(
                                     text = { Text(opcion) },
                                     onClick = { motivo = opcion; expandedMot = false }
