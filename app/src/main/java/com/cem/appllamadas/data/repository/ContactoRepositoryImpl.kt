@@ -79,7 +79,12 @@ class ContactoRepositoryImpl(
                 if (response.code() == 409) {
                     Result.failure(Exception("CONCURRENCE_ERROR"))
                 } else if (response.code() == 403) {
-                    Result.failure(Exception("LIST_CLOSED"))
+                    val errorBody = response.errorBody()?.string() ?: ""
+                    if (errorBody.contains("límite") || errorBody.contains("meta máxima") || errorBody.contains("cerrado")) {
+                        Result.failure(Exception("LIST_CLOSED"))
+                    } else {
+                        Result.failure(Exception("SESSION_EXPIRED"))
+                    }
                 } else {
                     Result.failure(Exception("Error de red: ${response.code()}"))
                 }

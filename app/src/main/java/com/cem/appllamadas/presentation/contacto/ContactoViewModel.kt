@@ -196,6 +196,8 @@ class ContactoViewModel @Inject constructor(
                 } else if (e.message == "LIST_CLOSED") {
                     _errorConcurrencia.value = "La lista ha alcanzado el límite máximo de gestiones exitosas. No se pueden hacer más llamadas."
                     forceRefresh()
+                } else if (e.message == "SESSION_EXPIRED") {
+                    _errorConcurrencia.value = "Tu sesión ha expirado por seguridad. Por favor, cierra sesión y vuelve a ingresar."
                 } else {
                     // Si falla por red, en este modelo de pool es crítico, no permitimos llamar
                     _errorConcurrencia.value = "Error de conexión: No se pudo verificar la exclusividad del contacto. Verifica tu internet."
@@ -314,6 +316,8 @@ class ContactoViewModel @Inject constructor(
                 } else if (e.message == "LIST_CLOSED") {
                     _errorConcurrencia.value = "La lista ha alcanzado el límite máximo de gestiones exitosas. No se pueden hacer más llamadas."
                     forceRefresh()
+                } else if (e.message == "SESSION_EXPIRED") {
+                    _errorConcurrencia.value = "Tu sesión ha expirado por seguridad. Por favor, cierra sesión y vuelve a ingresar."
                 } else {
                     _errorConcurrencia.value = "Error de conexión: No se pudo verificar la exclusividad del contacto. Verifica tu internet."
                 }
