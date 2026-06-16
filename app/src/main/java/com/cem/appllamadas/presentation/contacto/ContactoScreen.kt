@@ -190,21 +190,28 @@ fun ContactoListadoScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showLogoutDialog by remember { mutableStateOf(false) }
     
-    val filteredContactos = if (searchQuery.isBlank()) {
-        contactos
-    } else {
-        contactos.filter {
-            it.nombre.contains(searchQuery, ignoreCase = true) ||
-            it.telefono.contains(searchQuery) ||
-            (it.referenciaId?.contains(searchQuery, ignoreCase = true) ?: false)
+    val filteredContactos = remember(contactos, searchQuery) {
+        if (searchQuery.isBlank()) {
+            contactos
+        } else {
+            contactos.filter {
+                it.nombre.contains(searchQuery, ignoreCase = true) ||
+                it.telefono.contains(searchQuery) ||
+                (it.referenciaId?.contains(searchQuery, ignoreCase = true) ?: false)
+            }
         }
     }
 
-    val pendientes = filteredContactos.filter {
-        it.estado != EstadoContacto.DESISTIDO && it.estado != EstadoContacto.CONTACTADO
+    val pendientes = remember(filteredContactos) {
+        filteredContactos.filter {
+            it.estado != EstadoContacto.DESISTIDO && it.estado != EstadoContacto.CONTACTADO
+        }
     }
-    val gestionados = filteredContactos.filter {
-        it.estado == EstadoContacto.CONTACTADO || it.estado == EstadoContacto.DESISTIDO
+    
+    val gestionados = remember(filteredContactos) {
+        filteredContactos.filter {
+            it.estado == EstadoContacto.CONTACTADO || it.estado == EstadoContacto.DESISTIDO
+        }
     }
 
     Scaffold(
@@ -552,26 +559,28 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
             }
 
             val permitirLlamadaHoy = !intentoHoy || contacto.ultimaTipificacion?.contains("llamar", ignoreCase = true) == true
-            if (!bloqueado && permitirLlamadaHoy) {
-                // Botón principal de llamada
-                Button(
-                    onClick = {
-                        callPermissionLauncher.launch(
-                            arrayOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE)
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
-                ) {
-                    Icon(Icons.Default.Call, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Llamar ahora", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            if (!bloqueado) {
+                if (permitirLlamadaHoy) {
+                    // Botón principal de llamada
+                    Button(
+                        onClick = {
+                            callPermissionLauncher.launch(
+                                arrayOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE)
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Llamar ahora", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Spacer(Modifier.height(8.dp))
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                // Botón alternativo para registrar llamada recibida o manual
+                // Botón alternativo para registrar llamada recibida o manual siempre disponible
                 OutlinedButton(
                     onClick = {
                         viewModel.iniciarRegistroManual()
