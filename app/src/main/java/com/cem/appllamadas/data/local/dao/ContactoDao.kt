@@ -12,7 +12,13 @@ import kotlinx.coroutines.flow.Flow
 interface ContactoDao {
     @Query("""
         SELECT * FROM contacto 
-        WHERE estado NOT IN ('DESISTIDO', 'CONTACTADO') 
+        WHERE estado NOT IN ('DESISTIDO', 'CONTACTADO', 'CERRADO', 'CERRADO_POR_INTENTOS') 
+        AND (fechaUltimaGestion IS NULL 
+             OR fechaUltimaGestion < :cooldownTimestamp 
+             OR ultimaTipificacion LIKE '%Llamar m_s tarde%'
+             OR ultimaTipificacion LIKE '%llamar m_s tarde%'
+             OR ultimaTipificacion LIKE '%Llamar mas tarde%'
+             OR ultimaTipificacion LIKE '%llamar mas tarde%')
         ORDER BY 
             CASE 
                 WHEN ultimaTipificacion LIKE '%Llamar m_s tarde%' THEN 0
@@ -27,7 +33,7 @@ interface ContactoDao {
             IFNULL(fechaUltimaGestion, 0) ASC
         LIMIT 1
     """)
-    suspend fun getSiguienteContacto(): ContactoEntity?
+    suspend fun getSiguienteContacto(cooldownTimestamp: Long): ContactoEntity?
 
     @Query("SELECT * FROM contacto WHERE id = :id")
     suspend fun getContactoById(id: String): ContactoEntity?

@@ -14,8 +14,8 @@ class ContactoRepositoryImpl(
     private val apiService: ApiService
 ) : ContactoRepository {
 
-    override suspend fun getSiguienteContacto(): Contacto? {
-        val entity = contactoDao.getSiguienteContacto()
+    override suspend fun getSiguienteContacto(cooldownTimestamp: Long): Contacto? {
+        val entity = contactoDao.getSiguienteContacto(cooldownTimestamp)
         return entity?.toDomain()
     }
 

@@ -551,7 +551,8 @@ fun ContactoDetalleScreen(contacto: Contacto, viewModel: ContactoViewModel) {
                 }
             }
 
-            if (!bloqueado) {
+            val permitirLlamadaHoy = !intentoHoy || contacto.ultimaTipificacion?.contains("llamar", ignoreCase = true) == true
+            if (!bloqueado && permitirLlamadaHoy) {
                 // Botón principal de llamada
                 Button(
                     onClick = {
